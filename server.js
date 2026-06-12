@@ -5,6 +5,28 @@ const Anthropic = require('@anthropic-ai/sdk');
 
 const app = express();
 app.use(express.json());
+const crypto = require('crypto');
+
+// ---- AUTH (set COCKPIT_PASSWORD in Render env to activate) ----
+const PASS = process.env.COCKPIT_PASSWORD || '';
+const SECRET = crypto.createHash('sha256').update('ck|' + PASS + '|' + (process.env.NOTION_TOKEN || '')).digest('hex');
+const sign = () => crypto.createHmac('sha256', SECRET).update('ok').digest('hex');
+const getCookie = (req, k) => (req.headers.cookie || '').split(';').map(c => c.trim().split('=')).find(([n]) => n === k)?.[1];
+const isAuthed = (req) => !PASS || getCookie(req, 'cockpit_auth') === sign();
+
+const LOGIN_HTML = `<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><body style="font-family:-apple-system,sans-serif;background:#0f1115;color:#eee;display:flex;align-items:center;justify-content:center;height:100vh;margin:0"><form method="POST" action="/login" style="text-align:center"><h2 style="margin-bottom:4px">Outreach Cockpit</h2><p style="color:#888;margin-top:0">Enter password</p><input type="password" name="password" autofocus style="padding:12px;font-size:16px;border-radius:8px;border:1px solid #333;background:#1a1d24;color:#eee;width:220px"><br><button style="margin-top:12px;padding:12px 32px;font-size:16px;border-radius:8px;border:0;background:#3b82f6;color:#fff">Enter</button></form></body>`;
+
+app.use(express.urlencoded({ extended: false }));
+app.post('/login', (req, res) => {
+  if (PASS && req.body.password === PASS) {
+    res.setHeader('Set-Cookie', `cockpit_auth=${sign()}; HttpOnly; Secure; SameSite=Lax; Max-Age=31536000; Path=/`);
+    return res.redirect('/');
+  }
+  res.status(401).send(LOGIN_HTML);
+});
+app.use((req, res, next) => { if (isAuthed(req)) return next(); res.status(401).send(LOGIN_HTML); });
+// ---- END AUTH ----
+
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
 const notion = new Client({ auth: process.env.NOTION_TOKEN });
