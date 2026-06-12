@@ -39,6 +39,7 @@ function mapPage(p) {
   const x = p.properties;
   return {
     id: p.id,
+    created: p.created_time,
     name: txt(x['Name']?.title),
     lane: x['Lane']?.select?.name || '',
     stage: x['Stage']?.select?.name || '',
@@ -49,7 +50,9 @@ function mapPage(p) {
     lastContact: x['Last Contact']?.date?.start || null,
     notes: txt(x['Notes']?.rich_text),
     phone: x['Phone']?.phone_number || '',
-    source: x['Source']?.select?.name || ''
+    source: x['Source']?.select?.name || '',
+    response: x['Response']?.select?.name || '',
+    email: x['Email']?.email || ''
   };
 }
 
@@ -67,8 +70,154 @@ async function queryDue() {
     ],
     page_size: 100
   });
-  return res.results.map(mapPage);
+  let results = res.results, cursor = res.next_cursor;
+  while (cursor) {
+    const more = await notion.databases.query({ database_id: DB, filter: { and: [
+      { property: 'Next Touch', date: { on_or_before: today() } },
+      { property: 'Stage', select: { does_not_equal: 'Won' } },
+      { property: 'Stage', select: { does_not_equal: 'Not Now' } }
+    ]}, start_cursor: cursor, page_size: 100 });
+    results = results.concat(more.results); cursor = more.next_cursor;
+  }
+  return results.map(mapPage);
 }
+
+// ---- PRIORITY ENGINE (The Board, in code) ----
+function daysAgo(d) { return d ? Math.floor((Date.now() - new Date(d)) / 864e5) : null; }
+function classify(o) {
+  const booked = /booked/i.test(o.nextStep || '');
+  const la = daysAgo(o.lastContact);
+  if (booked && o.nextTouch === today()) return 'today';
+  if (booked && o.nextTouch < today()) return 'owe';      // booked date passed — close the loop
+  if (o.response === 'Positive') return 'owe';            // they engaged, ball in your court
+  if (o.response === 'Awaiting') return 'nudge';
+  if (la === null && (o.source === 'Austin' || o.source === 'Community')) return 'fresh';
+  if ((la === null || la >= 14) && (o.warmth === 'Hot' || (o.amount || 0) >= 100000)) return 'dark';
+  return 'due';
+}
+const wW = { Hot: 3, Warm: 2, Cold: 1 };
+const STAGE_W = { 'Open + Fund': 50, 'Transition': 50, 'Allocation': 45, 'Structuring': 40, 'Stress Test': 35, 'Due Diligence': 35, 'Enrollment Conversation': 30, 'Intro Made': 25, 'John Conversation': 22, 'Track-Record Review': 22, 'Statements + Intro to John': 20, 'Active': 15, 'Exploring': 10, 'Qualify': 8, 'Identified': 6, 'Intro/Reconnect': 5 };
+const score = o => (STAGE_W[o.stage] || 0) * 1e7 + (wW[o.warmth] || 0) * 1e6 + (o.amount || 0);
+const SECTIONS = [
+  ['today', "📅 Today's calls", 'Booked — prep, show up'],
+  ['owe',   '🔴 You owe a move', 'They engaged or a loop is open — nothing scheduled. Clear these first.'],
+  ['nudge', '🟡 Awaiting reply', 'You reached out; ball is theirs. Nudge if 2+ days quiet.'],
+  ['fresh', '🌅 Fresh — first touch', 'Met recently, never touched. Decays in days.'],
+  ['dark',  '🌑 Going dark', 'Real money or heat, 14+ days quiet. Rescue or release.'],
+  ['due',   '⚪ Also due', 'The rest of the due list, by weight.']
+];
+app.get('/api/board', async (req, res) => {
+  try {
+    const all = await queryDue();
+    const by = {}; for (const o of all) (by[classify(o)] = by[classify(o)] || []).push(o);
+    for (const k in by) by[k].sort((a, b) => score(b) - score(a));
+    const live = (by.today||[]).length + (by.owe||[]).length + (by.nudge||[]).length + (by.fresh||[]).length;
+    const verdict = (by.owe||[]).length + (by.fresh||[]).length > 20
+      ? `Over capacity — ${ (by.owe||[]).length } owed. Clear 🔴 first. Open nothing new.`
+      : live < 8 ? 'Capacity open — pull from the reservoir.' : `Work top to bottom. ${live} live loops.`;
+    res.json({ verdict, total: all.length, sections: SECTIONS.map(([key, title, hint]) => ({ key, title, hint, items: by[key] || [] })) });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+// ---- END PRIORITY ENGINE ----
+
+// ---- FUNNEL / SCOREBOARD (all active, grouped lane x stage) ----
+const LANE_PATHS = {
+  'PM Retail': ['Intro/Reconnect', 'Statements + Intro to John', 'Stress Test', 'Open + Fund', 'Won'],
+  'Advisor Recruit': ['Qualify', 'John Conversation', 'Due Diligence', 'Transition', 'Won'],
+  'AIM Allocation': ['Intro/Reconnect', 'Track-Record Review', 'Allocation', 'Won'],
+  'Coaching': ['Exploring', 'Enrollment Conversation', 'Active', 'Won'],
+  'Partnership/JV': ['Exploring', 'Structuring', 'Active', 'Won'],
+  'Referral': ['Identified', 'Intro Made', 'Won'],
+  'Connector/JV': ['Intro/Reconnect', 'Active', 'Won']
+};
+let funnelCache = { t: 0, data: null };
+app.get('/api/funnel', async (req, res) => {
+  try {
+    if (funnelCache.data && Date.now() - funnelCache.t < 180e3) return res.json(funnelCache.data);
+    let results = [], cursor = undefined;
+    do {
+      const r = await notion.databases.query({ database_id: DB,
+        filter: { property: 'Stage', select: { does_not_equal: 'Not Now' } },
+        start_cursor: cursor, page_size: 100 });
+      results = results.concat(r.results); cursor = r.next_cursor;
+    } while (cursor);
+    const all = results.map(mapPage);
+    const lanes = {};
+    for (const o of all) {
+      const lane = o.lane || 'Unsorted';
+      const L = lanes[lane] = lanes[lane] || { lane, count: 0, dollars: 0, won: 0, wonDollars: 0, stages: {}, people: {} };
+      L.count++; L.dollars += o.amount || 0;
+      if (o.stage === 'Won' || o.stage === 'Active') { L.won++; L.wonDollars += o.amount || 0; }
+      const st = o.stage || '—';
+      L.stages[st] = L.stages[st] || { count: 0, dollars: 0 };
+      L.stages[st].count++; L.stages[st].dollars += o.amount || 0;
+      (L.people[st] = L.people[st] || []).push({ id: o.id, name: o.name, amount: o.amount, warmth: o.warmth, nextStep: o.nextStep, nextTouch: o.nextTouch, phone: o.phone });
+    }
+    for (const k in lanes) for (const st in lanes[k].people) lanes[k].people[st].sort((a,b)=>(b.amount||0)-(a.amount||0));
+    const wk = Date.now() - 7 * 864e5;
+    let entered = 0, enteredD = 0, bookedAhead = 0;
+    for (const o of all) {
+      if (o.created && new Date(o.created) > wk) { entered++; enteredD += o.amount || 0; }
+      if (/booked/i.test(o.nextStep || '') && o.nextTouch >= today()) bookedAhead++;
+    }
+    let read = '';
+    const pm = lanes['PM Retail'];
+    if (pm) {
+      const path = LANE_PATHS['PM Retail'];
+      let bi = -1, bd = 0;
+      path.forEach((st, i) => { const c = pm.stages[st]; if (c && c.dollars > bd && st !== 'Won') { bd = c.dollars; bi = i; } });
+      if (bi >= 0 && bd > 0) {
+        const nxt = path[bi + 1];
+        const nc = (pm.stages[nxt] || {}).count || 0;
+        if (nxt && nxt !== 'Won' && nc === 0) read = `$${Math.round(bd/1000)}K massed at ${path[bi]}, nothing at ${nxt} — that's the week's strategic read.`;
+        else if (path[bi] !== 'Intro/Reconnect') read = `Biggest mass: $${Math.round(bd/1000)}K at ${path[bi]}.`;
+      }
+    }
+    const data = { goal: 10000000, momentum: { entered, enteredD, bookedAhead }, read, lanePaths: LANE_PATHS, lanes: Object.values(lanes).sort((a,b)=>b.dollars-a.dollars) };
+    funnelCache = { t: Date.now(), data };
+    res.json(data);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+// ---- END FUNNEL ----
+
+// ---- UPCOMING MEETINGS (booked, next 7 days) ----
+app.get('/api/upcoming', async (req, res) => {
+  try {
+    const end = new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10);
+    let results = [], cursor = undefined;
+    do {
+      const r = await notion.databases.query({ database_id: DB, filter: { and: [
+        { property: 'Next Touch', date: { after: today() } },
+        { property: 'Next Touch', date: { on_or_before: end } },
+        { property: 'Next Step', rich_text: { contains: 'ooked' } }
+      ]}, sorts: [{ property: 'Next Touch', direction: 'ascending' }], start_cursor: cursor, page_size: 100 });
+      results = results.concat(r.results); cursor = r.next_cursor;
+    } while (cursor);
+    res.json(results.map(mapPage));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+// ---- END UPCOMING ----
+
+// ---- CALL-DOWN LIST (all active, sortable) ----
+app.get('/api/calldown', async (req, res) => {
+  try {
+    let results = [], cursor = undefined;
+    do {
+      const r = await notion.databases.query({ database_id: DB, filter: { and: [
+        { property: 'Stage', select: { does_not_equal: 'Won' } },
+        { property: 'Stage', select: { does_not_equal: 'Not Now' } }
+      ]}, start_cursor: cursor, page_size: 100 });
+      results = results.concat(r.results); cursor = r.next_cursor;
+    } while (cursor);
+    const out = results.map(mapPage).map(o => ({ id: o.id, name: o.name, warmth: o.warmth, lane: o.lane, stage: o.stage,
+      amount: o.amount, phone: o.phone, lastContact: o.lastContact, sinceDays: o.lastContact ? Math.floor((Date.now() - new Date(o.lastContact)) / 864e5) : null }));
+    res.json(out);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+// ---- END CALL-DOWN ----
+
+
+
 
 async function updateOpp(id, f) {
   const props = {};
