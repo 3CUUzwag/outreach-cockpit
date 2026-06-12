@@ -5,106 +5,223 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Outreach Cockpit</title>
 <style>
-  :root{--bg:#fafaf8;--card:#fff;--ink:#1a1a1a;--muted:#6b6b6b;--line:#e7e7e2;--hot:#d6453a;--accent:#2f6f4f}
+  :root{--bg:#0f1115;--panel:#161a22;--card:#1c2230;--ink:#e8eaf0;--muted:#8b93a7;--line:#262d3d;
+        --hot:#ef4444;--warm:#f59e0b;--cold:#64748b;--green:#34d399;--blue:#60a5fa;--amberbg:#2a2210;--accent:#3b82f6}
   *{box-sizing:border-box}
-  body{margin:0;font:16px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink)}
-  header{padding:18px 20px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:5}
-  header h1{margin:0;font-size:20px}
-  header .sub{color:var(--muted);font-size:13px;margin-top:3px}
-  .wrap{max-width:680px;margin:0 auto;padding:14px 16px 160px}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin:10px 0;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+  body{margin:0;font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink)}
+  .wrap{max-width:760px;margin:0 auto;padding:12px 14px 170px}
+  .zlabel{font-size:10.5px;letter-spacing:.6px;color:#5b6478;margin:18px 4px 5px;text-transform:uppercase}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:13px 15px}
+  .barOuter{height:9px;background:#0c0f14;border-radius:5px;overflow:hidden;margin-top:8px;display:flex}
+  .scoreRow{display:flex;justify-content:space-between;font-size:12.5px;color:var(--muted);margin-top:7px;flex-wrap:wrap;gap:4px}
+  .verdict{font-size:13px;font-weight:600;margin-top:8px}
+  .laneHead{display:flex;justify-content:space-between;align-items:baseline}
+  .laneName{font-weight:650;font-size:14.5px}
+  .laneTot{font-size:12px;color:var(--muted)}
+  .rail{display:flex;gap:4px;margin-top:9px}
+  .stagecell{flex:1;min-width:0;border-radius:8px;background:#10141c;border:1px solid var(--line);padding:7px 3px;text-align:center;cursor:pointer}
+  .stagecell.haspeople{border-color:#33415e;background:#141b2a}
+  .stagecell.sel{border-color:var(--accent);background:#16233f}
+  .stN{font-size:16px;font-weight:700}
+  .stD{font-size:9.5px;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .stM{font-size:10px;color:var(--green)}
+  .read{font-size:12.5px;color:#f0b35c;margin-top:9px}
+  .minis{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
+  .mini{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 11px;font-size:12.5px}
+  .mini b{font-weight:620}
+  .mini span{color:var(--muted)}
+  .drawer{margin-top:10px;border-top:1px solid var(--line);padding-top:6px;display:none}
+  .threat{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);font-size:13px}
+  .threat:last-child{border-bottom:0}
+  .threat .who{color:#dde2ee}
+  .threat .tag{color:var(--muted);white-space:nowrap;font-size:12px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:12px 14px;margin:8px 0}
   .row{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
-  .name{font-weight:600;font-size:17px}
+  .name{font-weight:620;font-size:16px}
+  .amt{color:var(--green);font-size:13px;font-weight:600;white-space:nowrap}
   .tags{font-size:12px;color:var(--muted);margin-top:2px}
   .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle}
-  .Hot{background:var(--hot)} .Warm{background:#e0922f} .Cold{background:#9aa}
-  .next{font-size:13px;color:var(--muted);margin-top:8px}
-  .actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
-  a.btn,button.btn{font-size:13px;text-decoration:none;border:1px solid var(--line);background:#fff;color:var(--ink);padding:7px 12px;border-radius:9px;cursor:pointer}
-  a.btn.call{border-color:var(--accent);color:var(--accent)}
+  .Hot{background:var(--hot)}.Warm{background:var(--warm)}.Cold{background:var(--cold)}
+  .next{font-size:13px;color:#aeb6c9;margin-top:7px}
+  .actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+  a.btn,button.btn{font-size:12.5px;text-decoration:none;border:1px solid var(--line);background:#141926;color:var(--ink);padding:6px 11px;border-radius:8px;cursor:pointer}
+  a.btn.call{border-color:var(--green);color:var(--green)}
   button.done{border-color:var(--accent);color:var(--accent)}
-  .empty{text-align:center;color:var(--muted);padding:40px}
-  /* chat */
-  #chat{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line)}
-  #log{max-height:34vh;overflow:auto;padding:10px 16px;max-width:680px;margin:0 auto}
+  .collapsed-note{color:var(--muted);font-size:13px;padding:6px 4px;cursor:pointer}
+  .empty{text-align:center;color:var(--muted);padding:24px}
+  .sorts{display:flex;gap:6px;margin:8px 0}
+  .sorts button{font-size:12px;border:1px solid var(--line);background:#141926;color:var(--muted);padding:5px 10px;border-radius:8px;cursor:pointer}
+  .sorts button.on{color:var(--ink);border-color:var(--accent)}
+  .cd{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 2px;border-bottom:1px solid var(--line);font-size:13.5px}
+  .cd:last-child{border-bottom:0}
+  .cd .since{color:var(--muted);font-size:12px;white-space:nowrap}
+  .cd a{color:var(--green);text-decoration:none;font-size:12.5px;border:1px solid var(--line);padding:4px 9px;border-radius:7px}
+  #chat{position:fixed;left:0;right:0;bottom:0;background:#12151d;border-top:1px solid var(--line)}
+  #log{max-height:30vh;overflow:auto;padding:8px 16px;max-width:760px;margin:0 auto}
   .msg{margin:6px 0;font-size:14px}
-  .msg.you{text-align:right;color:#333}
-  .msg.bot{color:var(--accent)}
-  #bar{display:flex;gap:8px;padding:10px 16px;max-width:680px;margin:0 auto;border-top:1px solid var(--line)}
-  #bar input{flex:1;padding:11px 12px;border:1px solid var(--line);border-radius:10px;font-size:15px}
+  .msg.you{text-align:right;color:#cfd6e6}
+  .msg.bot{color:var(--green)}
+  #bar{display:flex;gap:8px;padding:10px 16px calc(10px + env(safe-area-inset-bottom));max-width:760px;margin:0 auto;border-top:1px solid var(--line)}
+  #bar input{flex:1;padding:11px 12px;border:1px solid var(--line);background:#0c0f14;color:var(--ink);border-radius:10px;font-size:15px}
   #bar button{padding:0 16px;border:0;background:var(--accent);color:#fff;border-radius:10px;font-size:15px;cursor:pointer}
 </style>
 </head>
 <body>
-<header>
-  <h1>Today's Run</h1>
-  <div class="sub" id="count">Loading…</div>
-</header>
-<div class="wrap" id="list"></div>
+<div class="wrap">
+  <div class="zlabel">The campaign — am I winning?</div>
+  <div class="panel" id="z1">Loading…</div>
+  <div class="zlabel">The field — where is everything?</div>
+  <div id="z2"></div>
+  <div class="zlabel">The threats — what's bleeding?</div>
+  <div class="panel" id="z3"><div class="empty">Loading…</div></div>
+  <div class="zlabel">The force — today's landing zone (you overrule anytime)</div>
+  <div id="z4"></div>
+  <div class="zlabel">The call-down — free space? work this list</div>
+  <div class="panel" id="z5"><div class="empty">Loading…</div></div>
+</div>
 
 <div id="chat">
-  <div id="log"><div class="msg bot">Tell me how each touch went — "texted Lee, wants a call Thursday" — and I'll log it and tee up the next.</div></div>
-  <div id="bar">
-    <input id="say" placeholder="Log a touch…" autocomplete="off" />
-    <button onclick="send()">Send</button>
-  </div>
+  <div id="log"><div class="msg bot">The helm. Log touches ("texted Lee, call Thu") or command ("show everyone at stress test").</div></div>
+  <div id="bar"><input id="say" placeholder="Helm…" autocomplete="off" /><button onclick="send()">Send</button></div>
 </div>
 
 <script>
-const $ = s => document.querySelector(s);
-const digits = p => (p||'').replace(/[^0-9+]/g,'');
-let history = [];
+const $=s=>document.querySelector(s);
+const digits=p=>(p||'').replace(/[^0-9+]/g,'');
+const fmt$=n=>!n?'':n>=1e6?'$'+(n/1e6).toFixed(1)+'M':n>=1e3?'$'+Math.round(n/1e3)+'K':'$'+n;
+let history=[], BOARD=null, CD=[];
 
-async function load(){
-  const r = await fetch('/api/today'); const data = await r.json();
-  $('#count').textContent = data.length + ' due today';
-  const list = $('#list'); list.innerHTML = '';
-  if(!data.length){ list.innerHTML = '<div class="empty">Nothing due. You’re clear. \u{1F44A}</div>'; return; }
-  for(const p of data){
-    const d = digits(p.phone);
-    const card = document.createElement('div'); card.className='card';
-    card.innerHTML = `
-      <div class="row">
-        <div>
-          <div class="name">${p.name}</div>
-          <div class="tags"><span class="dot ${p.warmth}"></span>${[p.warmth,p.lane,p.stage].filter(Boolean).join(' · ')}</div>
-        </div>
-      </div>
-      ${p.nextStep?`<div class="next">➤ ${p.nextStep}</div>`:''}
-      <div class="actions">
-        ${d?`<a class="btn call" href="tel:${d}">Call</a><a class="btn" href="sms:${d}">Text</a>`:'<span class="tags">no number</span>'}
-        <button class="btn done" onclick="quick('${p.id}','${p.name.replace(/'/g,"")}')">Reached → next week</button>
-      </div>`;
-    list.appendChild(card);
+function cardHTML(p,showStage){
+  const d=digits(p.phone);
+  return `<div class="card"><div class="row"><div>
+    <div class="name">${p.name}</div>
+    <div class="tags"><span class="dot ${p.warmth}"></span>${[p.warmth,p.lane,showStage?p.stage:''].filter(Boolean).join(' · ')}</div>
+    </div>${p.amount?`<div class="amt">${fmt$(p.amount)}</div>`:''}</div>
+    ${p.nextStep?`<div class="next">➤ ${p.nextStep}</div>`:''}
+    <div class="actions">
+      ${d?`<a class="btn call" href="tel:${d}">Call</a><a class="btn" href="sms:${d}">Text</a>`:'<span class="tags">no number</span>'}
+      <button class="btn done" onclick="quick('${p.id}','${(p.name||'').replace(/'/g,'')}')">Reached → next week</button>
+    </div></div>`;
+}
+
+async function loadFunnel(){
+  const r=await fetch('/api/funnel'); const f=await r.json();
+  if(f.error){ $('#z1').textContent='Error: '+f.error; return; }
+  let won=0,motion=0;
+  for(const L of f.lanes){ won+=L.wonDollars; motion+=L.dollars-L.wonDollars; }
+  const pct=Math.min(100,won/f.goal*100), mp=Math.min(100-pct,motion/f.goal*100);
+  const m=f.momentum||{};
+  $('#z1').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:baseline">
+    <strong style="font-size:14.5px">Road to ${fmt$(f.goal)}</strong>
+    <span style="font-size:12px;color:var(--muted)">${fmt$(won)||'$0'} won · ${fmt$(motion)} in motion</span></div>
+    <div class="barOuter"><div style="width:${pct}%;background:var(--green)"></div><div style="width:${mp}%;background:rgba(96,165,250,.45)"></div></div>
+    <div class="scoreRow"><span>This week: +${m.entered||0} entered (${fmt$(m.enteredD)||'$0'}) · ${m.bookedAhead||0} calls booked ahead</span><span>${(won/f.goal*100).toFixed(1)}%</span></div>
+    <div class="verdict" id="verdictLine"></div>`;
+  if(BOARD) $('#verdictLine').textContent=BOARD.verdict;
+  const host=$('#z2'); host.innerHTML='';
+  const top=f.lanes.find(L=>L.lane==='PM Retail');
+  if(top){
+    const path=f.lanePaths['PM Retail'].filter(st=>st!=='Won');
+    const cells=path.map(st=>{
+      const c=top.stages[st]||{count:0,dollars:0};
+      return `<div class="stagecell ${c.count?'haspeople':''}" onclick="toggleDrawer(this,'PM Retail','${st.replace(/'/g,'')}')">
+        <div class="stN">${c.count||'·'}</div><div class="stM">${c.count?fmt$(c.dollars):''}</div><div class="stD">${st.replace('Statements + Intro to John','Stmts→John').replace('Intro/Reconnect','Intro')}</div></div>`;}).join('');
+    const el=document.createElement('div'); el.className='panel'; el.dataset.lane='PM Retail';
+    el.innerHTML=`<div class="laneHead"><span class="laneName">PM Retail (AUM)</span><span class="laneTot">${top.count} · ${fmt$(top.dollars)}${top.won?` · <span style="color:var(--green)">${top.won} won</span>`:''}</span></div>
+      <div class="rail">${cells}</div>${f.read?`<div class="read">⚠ ${f.read}</div>`:''}<div class="drawer"></div>`;
+    host.appendChild(el);
   }
+  const minis=document.createElement('div'); minis.className='minis';
+  for(const L of f.lanes){
+    if(L.lane==='PM Retail'||(L.lane==='Unsorted'&&L.count<2)) continue;
+    const stages=Object.entries(L.stages).filter(([s,c])=>c.count).map(([s,c])=>`${c.count} ${s}`).slice(0,2).join(' · ');
+    const mv=document.createElement('div'); mv.className='mini';
+    mv.innerHTML=`<b>${L.lane}</b> <span style="float:right">${L.count}${L.dollars?' · '+fmt$(L.dollars):''}</span><br><span>${stages||'—'}</span>`;
+    minis.appendChild(mv);
+  }
+  host.appendChild(minis);
+  window.__funnel=f;
+}
+
+function toggleDrawer(cell,lane,stage){
+  const laneEl=cell.closest('.panel'); const drawer=laneEl.querySelector('.drawer');
+  const was=cell.classList.contains('sel');
+  laneEl.querySelectorAll('.stagecell').forEach(c=>c.classList.remove('sel'));
+  if(was){ drawer.style.display='none'; drawer.innerHTML=''; return; }
+  cell.classList.add('sel');
+  const L=window.__funnel.lanes.find(l=>l.lane===lane);
+  const people=(L&&L.people[stage])||[];
+  drawer.innerHTML=people.length?people.map(p=>cardHTML({...p,lane,stage:''},false)).join(''):'<div class="empty">No one here yet.</div>';
+  drawer.style.display='block';
+}
+
+async function loadBoard(){
+  const r=await fetch('/api/board'); const b=await r.json();
+  if(b.error){ $('#z3').textContent='Error: '+b.error; return; }
+  BOARD=b; const vl=$('#verdictLine'); if(vl) vl.textContent=b.verdict;
+  const get=k=>(b.sections.find(s=>s.key===k)||{}).items||[];
+  const dark=get('dark'), nudge=get('nudge');
+  const rows=[];
+  for(const p of dark.slice(0,6)) rows.push(`<div class="threat"><span class="who">${p.amount?`<span style="color:#ef6a5f;font-weight:600">${fmt$(p.amount)}</span> `:''}${p.name} — ${p.stage}${p.lastContact?'':' · never touched'}</span><span class="tag">rescue</span></div>`);
+  if(nudge.length) rows.push(`<div class="threat"><span class="who">${nudge.length} awaiting reply</span><span class="tag">nudge if 2d+ quiet</span></div>`);
+  $('#z3').innerHTML=rows.join('')||'<div class="empty">Nothing bleeding. 👊</div>';
+  const host=$('#z4'); host.innerHTML='';
+  const today=get('today'), owe=get('owe'), fresh=get('fresh'), due=get('due');
+  let u=[]; try{ u=await (await fetch('/api/upcoming')).json(); }catch(e){}
+  for(const p of today) host.insertAdjacentHTML('beforeend',cardHTML(p,true));
+  owe.slice(0,8).forEach((p,i)=>{ host.insertAdjacentHTML('beforeend',cardHTML(p,true).replace('<div class="name">',`<div class="name"><span style="color:var(--blue);font-size:12px;font-weight:700">MOVE ${i+1} · </span>`)); });
+  for(const p of fresh.slice(0,4)) host.insertAdjacentHTML('beforeend',cardHTML(p,true));
+  if(Array.isArray(u)&&u.length){
+    const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const lines=u.slice(0,8).map(p=>{const dt=new Date(p.nextTouch+'T12:00:00');return `<div class="threat"><span class="who"><b style="color:var(--blue)">${days[dt.getDay()]} ${dt.getMonth()+1}/${dt.getDate()}</b> ${p.name}${p.amount?' · <span style=\"color:var(--green)\">'+fmt$(p.amount)+'</span>':''}</span><span class="tag">${(p.nextStep||'').slice(0,28)}</span></div>`;}).join('');
+    host.insertAdjacentHTML('beforeend',`<div class="panel" style="margin-top:8px"><div style="font-size:12.5px;color:var(--muted);margin-bottom:4px">🗓 Booked ahead</div>${lines}</div>`);
+  }
+  const rest=owe.length-8+due.length;
+  if(rest>0) host.insertAdjacentHTML('beforeend',`<div class="collapsed-note">+ ${rest} more due — they're in the call-down below</div>`);
+}
+
+let cdSort='since';
+async function loadCalldown(){
+  const r=await fetch('/api/calldown'); CD=await r.json();
+  if(CD.error){ $('#z5').textContent='Error: '+CD.error; return; }
+  renderCD();
+}
+function renderCD(){
+  const wW={Hot:3,Warm:2,Cold:1};
+  let list=[...CD];
+  if(cdSort==='since') list.sort((a,b)=>(b.sinceDays??9999)-(a.sinceDays??9999));
+  if(cdSort==='warmth') list.sort((a,b)=>(wW[b.warmth]||0)-(wW[a.warmth]||0)||(b.sinceDays??0)-(a.sinceDays??0));
+  if(cdSort==='money') list.sort((a,b)=>(b.amount||0)-(a.amount||0));
+  const rows=list.slice(0,60).map(p=>{const d=digits(p.phone);
+    return `<div class="cd"><span><span class="dot ${p.warmth}"></span>${p.name}${p.amount?` <span style="color:var(--green);font-size:12px">${fmt$(p.amount)}</span>`:''}<br><span style="font-size:11.5px;color:var(--muted)">${[p.lane,p.stage].filter(Boolean).join(' · ')}</span></span>
+      <span style="display:flex;align-items:center;gap:8px"><span class="since">${p.sinceDays==null?'never':p.sinceDays+'d ago'}</span>${d?`<a href="tel:${d}">Call</a>`:''}</span></div>`;}).join('');
+  $('#z5').innerHTML=`<div class="sorts">
+      <button class="${cdSort==='since'?'on':''}" onclick="cdSort='since';renderCD()">Longest silent</button>
+      <button class="${cdSort==='warmth'?'on':''}" onclick="cdSort='warmth';renderCD()">Warmth</button>
+      <button class="${cdSort==='money'?'on':''}" onclick="cdSort='money';renderCD()">$</button>
+    </div>${rows||'<div class="empty">Empty.</div>'}
+    <div class="collapsed-note">${CD.length} active relationships on the list</div>`;
 }
 
 async function quick(id,name){
-  const d = new Date(Date.now()+7*864e5).toISOString().slice(0,10);
+  const d=new Date(Date.now()+7*864e5).toISOString().slice(0,10);
   await fetch('/api/capture',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({id,last_contact:new Date().toISOString().slice(0,10),next_touch:d,notes_append:'Reached out (quick log).'})});
-  log('bot','Logged '+name+' — next touch in a week.');
-  load();
+  log('bot','Logged '+name+' — next touch in a week.'); refresh();
 }
-
 function log(who,text){ const l=$('#log'); const m=document.createElement('div'); m.className='msg '+who; m.textContent=text; l.appendChild(m); l.scrollTop=l.scrollHeight; }
-
 async function send(){
-  const v = $('#say').value.trim(); if(!v) return;
-  $('#say').value=''; log('you',v);
-  history.push({role:'user',content:v});
-  log('bot','…');
+  const v=$('#say').value.trim(); if(!v) return;
+  $('#say').value=''; log('you',v); history.push({role:'user',content:v}); log('bot','…');
   try{
-    const r = await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:history})});
-    const j = await r.json();
-    $('#log').lastChild.remove();
-    log('bot', j.reply || j.error || 'done');
-    if(j.messages) history = j.messages;
-    load();
+    const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:history})});
+    const j=await r.json(); $('#log').lastChild.remove();
+    log('bot', j.reply||j.error||'done'); if(j.messages) history=j.messages; refresh();
   }catch(e){ $('#log').lastChild.remove(); log('bot','error: '+e.message); }
 }
 $('#say').addEventListener('keydown',e=>{ if(e.key==='Enter') send(); });
-load();
+function refresh(){ loadFunnel(); loadBoard(); loadCalldown(); }
+refresh();
 </script>
 </body>
 </html>
