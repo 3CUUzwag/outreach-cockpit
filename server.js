@@ -52,6 +52,7 @@ function mapPage(p) {
     phone: x['Phone']?.phone_number || '',
     source: x['Source']?.select?.name || '',
     response: x['Response']?.select?.name || '',
+    community: (x['Community']?.multi_select || []).map(s => s.name).join(', '),
     email: x['Email']?.email || ''
   };
 }
@@ -210,7 +211,10 @@ app.get('/api/calldown', async (req, res) => {
       results = results.concat(r.results); cursor = r.next_cursor;
     } while (cursor);
     const out = results.map(mapPage).map(o => ({ id: o.id, name: o.name, warmth: o.warmth, lane: o.lane, stage: o.stage,
-      amount: o.amount, phone: o.phone, lastContact: o.lastContact, sinceDays: o.lastContact ? Math.floor((Date.now() - new Date(o.lastContact)) / 864e5) : null }));
+      amount: o.amount, phone: o.phone, email: o.email, nextStep: o.nextStep, nextTouch: o.nextTouch, response: o.response,
+      source: o.source, community: o.community, notes: o.notes, lastContact: o.lastContact,
+      scope: (o.warmth === 'Cold' && !o.lastContact) ? 'Reservoir' : 'Active',
+      sinceDays: o.lastContact ? Math.floor((Date.now() - new Date(o.lastContact)) / 864e5) : null }));
     res.json(out);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -223,6 +227,7 @@ async function updateOpp(id, f) {
   const props = {};
   if (f.stage) props['Stage'] = { select: { name: f.stage } };
   if (f.warmth) props['Warmth'] = { select: { name: f.warmth } };
+  if (f.response) props['Response'] = { select: { name: f.response } };
   if (f.next_step !== undefined) props['Next Step'] = { rich_text: [{ text: { content: String(f.next_step) } }] };
   if (f.next_touch !== undefined) props['Next Touch'] = f.next_touch ? { date: { start: f.next_touch } } : { date: null };
   if (f.last_contact) props['Last Contact'] = { date: { start: f.last_contact } };
@@ -254,8 +259,15 @@ const tools = [
 async function runTool(name, input) {
   if (name === 'list_due') return await queryDue();
   if (name === 'search_by_name') {
-    const res = await notion.databases.query({ database_id: DB, filter: { property: 'Name', title: { contains: input.name } }, page_size: 10 });
-    return res.results.map(mapPage);
+    const q = (input.name || '').trim();
+    const tries = [q, ...q.split(/\s+/).filter(w => w.length > 2).sort((a, b) => b.length - a.length)];
+    const seen = new Set(); let out = [];
+    for (const t of tries) {
+      const res = await notion.databases.query({ database_id: DB, filter: { property: 'Name', title: { contains: t } }, page_size: 10 });
+      for (const p of res.results.map(mapPage)) if (!seen.has(p.id)) { seen.add(p.id); out.push(p); }
+      if (out.length >= 3 && t === q) break;
+    }
+    return out.slice(0, 10);
   }
   if (name === 'update_opportunity') return await updateOpp(input.id, input);
   return { error: 'unknown tool' };
@@ -267,6 +279,8 @@ app.post('/api/chat', async (req, res) => {
 He works his outreach list and tells you the outcome of each touch in plain language ("texted Lee, wants a call Thursday").
 Your job: find the right record (search_by_name) and update it (update_opportunity).
 GOVERNING LAW: every active opportunity must end with a FUTURE next_touch — never leave it blank unless you set Stage to Won or Not Now. Set last_contact to today whenever he reached out.
+CALENDAR TRUTH: records whose Next Step starts with "Booked:" carry dates synced FROM his real calendar by the morning dispatch. You CANNOT see the calendar. NEVER re-date a Booked record from vague phrasing ("tomorrow", "next week") — relative words are unreliable across midnight. Only change a date when he gives an explicit one ("move Pam to 6/14"). If he says booked dates look wrong, reply that the dispatch reconciles them from the calendar each morning and you've flagged it — do not guess.
+SEARCH: if a name misses, retry with single words (last name, company word) before saying someone isn't in the system. People are often saved with middle initials or company suffixes.
 Keep replies to ONE short line: confirm what you logged + who's next. Compliance: never advise tying free coaching to investing (enticement risk).`;
     let messages = req.body.messages || [{ role: 'user', content: req.body.message }];
     for (let i = 0; i < 6; i++) {

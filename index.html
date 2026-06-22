@@ -6,221 +6,395 @@
 <title>Outreach Cockpit</title>
 <style>
   :root{--bg:#0f1115;--panel:#161a22;--card:#1c2230;--ink:#e8eaf0;--muted:#8b93a7;--line:#262d3d;
-        --hot:#ef4444;--warm:#f59e0b;--cold:#64748b;--green:#34d399;--blue:#60a5fa;--amberbg:#2a2210;--accent:#3b82f6}
+        --hot:#ef4444;--warm:#f59e0b;--cold:#64748b;--green:#34d399;--blue:#60a5fa;--accent:#3b82f6}
   *{box-sizing:border-box}
   body{margin:0;font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink)}
-  .wrap{max-width:760px;margin:0 auto;padding:12px 14px 170px}
-  .zlabel{font-size:10.5px;letter-spacing:.6px;color:#5b6478;margin:18px 4px 5px;text-transform:uppercase}
+  .wrap{max-width:920px;margin:0 auto;padding:12px 14px 150px}
   .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:13px 15px}
-  .barOuter{height:9px;background:#0c0f14;border-radius:5px;overflow:hidden;margin-top:8px;display:flex}
-  .scoreRow{display:flex;justify-content:space-between;font-size:12.5px;color:var(--muted);margin-top:7px;flex-wrap:wrap;gap:4px}
-  .verdict{font-size:13px;font-weight:600;margin-top:8px}
-  .laneHead{display:flex;justify-content:space-between;align-items:baseline}
-  .laneName{font-weight:650;font-size:14.5px}
-  .laneTot{font-size:12px;color:var(--muted)}
-  .rail{display:flex;gap:4px;margin-top:9px}
-  .stagecell{flex:1;min-width:0;border-radius:8px;background:#10141c;border:1px solid var(--line);padding:7px 3px;text-align:center;cursor:pointer}
-  .stagecell.haspeople{border-color:#33415e;background:#141b2a}
-  .stagecell.sel{border-color:var(--accent);background:#16233f}
-  .stN{font-size:16px;font-weight:700}
-  .stD{font-size:9.5px;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .stM{font-size:10px;color:var(--green)}
-  .read{font-size:12.5px;color:#f0b35c;margin-top:9px}
-  .minis{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
-  .mini{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 11px;font-size:12.5px}
-  .mini b{font-weight:620}
-  .mini span{color:var(--muted)}
-  .drawer{margin-top:10px;border-top:1px solid var(--line);padding-top:6px;display:none}
-  .threat{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);font-size:13px}
-  .threat:last-child{border-bottom:0}
-  .threat .who{color:#dde2ee}
-  .threat .tag{color:var(--muted);white-space:nowrap;font-size:12px}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:12px 14px;margin:8px 0}
-  .row{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
-  .name{font-weight:620;font-size:16px}
+  .scoretop{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+  .barOuter{height:10px;background:#0c0f14;border-radius:5px;overflow:hidden;margin-top:9px;display:flex}
+  .metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:11px}
+  .metric{background:#10141c;border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+  .metric .k{font-size:11px;color:var(--muted)}
+  .metric .v{font-size:21px;font-weight:700;margin-top:1px}
+  .verdict{font-size:12.5px;font-weight:600;margin-top:10px;color:#cdd5e6}
+  .tabbar{display:flex;gap:4px;margin:14px 0 12px;overflow-x:auto;border-bottom:1px solid var(--line)}
+  .tab{padding:9px 14px;font-size:14px;color:var(--muted);background:transparent;border:0;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap}
+  .tab.on{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}
+  .view{display:none}.view.on{display:block}
+  .subhead{font-size:12px;color:var(--muted);margin:0 2px 10px}
+  /* categories */
+  .cat{margin:0 0 10px}
+  .cathead{display:flex;align-items:center;gap:8px;cursor:pointer;padding:9px 11px;background:var(--panel);border:1px solid var(--line);border-radius:11px}
+  .cathead .ico{font-size:15px}.cathead .ttl{font-weight:650;font-size:14px}
+  .cathead .ct{margin-left:auto;font-size:12px;color:var(--muted);background:#10141c;border:1px solid var(--line);border-radius:20px;padding:2px 9px}
+  .cathead .car{color:var(--muted);font-size:12px;transition:transform .15s}
+  .cat.closed .car{transform:rotate(-90deg)}.cat.closed .catbody{display:none}
+  .catbody{padding:6px 2px 2px}.cathint{font-size:11px;color:#6b7280;margin:2px 4px 6px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:7px 0}
+  .crow{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+  .nm{font-weight:620;font-size:15px}
   .amt{color:var(--green);font-size:13px;font-weight:600;white-space:nowrap}
-  .tags{font-size:12px;color:var(--muted);margin-top:2px}
-  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle}
+  .meta{font-size:11.5px;color:var(--muted);margin-top:2px}
+  .ctx{font-size:12.5px;color:#aeb6c9;margin-top:6px}
+  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:middle}
   .Hot{background:var(--hot)}.Warm{background:var(--warm)}.Cold{background:var(--cold)}
-  .next{font-size:13px;color:#aeb6c9;margin-top:7px}
-  .actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
-  a.btn,button.btn{font-size:12.5px;text-decoration:none;border:1px solid var(--line);background:#141926;color:var(--ink);padding:6px 11px;border-radius:8px;cursor:pointer}
-  a.btn.call{border-color:var(--green);color:var(--green)}
-  button.done{border-color:var(--accent);color:var(--accent)}
-  .collapsed-note{color:var(--muted);font-size:13px;padding:6px 4px;cursor:pointer}
-  .empty{text-align:center;color:var(--muted);padding:24px}
-  .sorts{display:flex;gap:6px;margin:8px 0}
-  .sorts button{font-size:12px;border:1px solid var(--line);background:#141926;color:var(--muted);padding:5px 10px;border-radius:8px;cursor:pointer}
-  .sorts button.on{color:var(--ink);border-color:var(--accent)}
-  .cd{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 2px;border-bottom:1px solid var(--line);font-size:13.5px}
-  .cd:last-child{border-bottom:0}
-  .cd .since{color:var(--muted);font-size:12px;white-space:nowrap}
-  .cd a{color:var(--green);text-decoration:none;font-size:12.5px;border:1px solid var(--line);padding:4px 9px;border-radius:7px}
+  .acts{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap}
+  .b{font-size:12px;border:1px solid var(--line);background:#141926;color:var(--ink);padding:6px 10px;border-radius:8px;cursor:pointer;white-space:nowrap;text-decoration:none;display:inline-block}
+  .b.call{border-color:var(--green);color:var(--green)}
+  .b.text{border-color:var(--blue);color:var(--blue)}
+  .b.book{border-color:var(--accent);color:#bcd2ff}
+  .b.warm{border-color:var(--warm);color:#ffd9a1}
+  .b.adv{border-color:#a78bfa;color:#cdbcff}
+  .b.no{border-color:#475569;color:#9aa3b8}
+  .b.pass{border-color:#7f1d1d;color:#fda4a4}
+  .empty{color:#4d5772;font-size:12px;text-align:center;padding:8px}
+  /* people */
+  .filt{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+  .srch{width:100%;padding:10px 12px;border:1px solid var(--line);background:#0c0f14;color:var(--ink);border-radius:10px;font-size:14px}
+  .chiprow{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  .lbl{font-size:11px;color:#6b7280;margin-right:2px}
+  .chip{font-size:12px;padding:5px 11px;border-radius:20px;border:1px solid var(--line);background:#141926;color:var(--muted);cursor:pointer}
+  .chip.on{border-color:var(--accent);color:var(--ink);background:#16233f}
+  .sortsel{padding:7px 10px;background:#0c0f14;color:var(--ink);border:1px solid var(--line);border-radius:8px;font-size:12.5px}
+  .prow{display:flex;align-items:center;gap:10px;padding:10px 11px;border:1px solid var(--line);border-radius:11px;background:var(--card);margin:6px 0;position:relative}
+  .prow .pn{font-weight:600;font-size:14.5px;cursor:pointer}
+  .prow .pm{font-size:11.5px;color:var(--muted);margin-top:1px}
+  .prow .idle{margin-left:auto;font-size:12px;color:var(--muted);white-space:nowrap;text-align:right}
+  .prow .idle b{color:#cdd5e6}
+  .pamt{color:var(--green);font-size:12.5px;font-weight:600;white-space:nowrap}
+  .tip{position:absolute;left:12px;top:calc(100% - 2px);z-index:20;background:#0c0f14;border:1px solid var(--accent);border-radius:10px;padding:9px 11px;width:min(86vw,360px);box-shadow:0 8px 24px rgba(0,0,0,.5);font-size:12px;color:#cdd5e6}
+  .tip .th{font-size:11px;color:var(--muted);margin-bottom:3px}
+  .pop{position:absolute;right:10px;top:calc(100% - 2px);z-index:25;background:#161a22;border:1px solid var(--accent);border-radius:10px;padding:8px;display:flex;gap:8px}
+  .countline{font-size:11.5px;color:var(--muted);margin:8px 2px}
+  /* kanban */
+  .chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:11px}
+  .board{display:flex;gap:9px;overflow-x:auto;padding-bottom:8px}
+  .col{min-width:172px;flex:1;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:9px}
+  .col.drop{border-color:var(--accent);background:#16233f}
+  .colhead{display:flex;justify-content:space-between;align-items:baseline}
+  .colhead .t{font-size:12.5px;font-weight:650}.colhead .n{font-size:12px;color:var(--muted)}
+  .colsub{font-size:11px;color:var(--muted);margin-top:1px}.colsub .e{color:var(--green)}
+  .kcard{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:9px 10px;margin-top:8px;cursor:grab}
+  .kcard .knm{font-weight:600;font-size:13.5px;display:flex;justify-content:space-between;gap:6px}
+  .kcard .kamt{color:var(--green);font-size:12px;white-space:nowrap}
+  .kcard .knx{font-size:11.5px;color:var(--muted);margin-top:3px}
+  .colempty{font-size:11.5px;color:#4d5772;text-align:center;padding:14px 4px}
+  .hint{font-size:11.5px;color:var(--muted);margin-top:8px}
+  table.deal{width:100%;border-collapse:collapse}
+  table.deal th{font-size:11.5px;color:var(--muted);font-weight:600;padding:7px 8px;border-bottom:1px solid var(--line);text-align:right}
+  table.deal th:first-child{text-align:left}
+  table.deal td{font-size:13px;padding:9px 8px;border-bottom:1px solid var(--line);text-align:right}
+  table.deal td:first-child{text-align:left}
+  table.deal tr.tot td{font-weight:700;border-top:2px solid var(--line)}
+  /* chat */
   #chat{position:fixed;left:0;right:0;bottom:0;background:#12151d;border-top:1px solid var(--line)}
-  #log{max-height:30vh;overflow:auto;padding:8px 16px;max-width:760px;margin:0 auto}
-  .msg{margin:6px 0;font-size:14px}
-  .msg.you{text-align:right;color:#cfd6e6}
-  .msg.bot{color:var(--green)}
-  #bar{display:flex;gap:8px;padding:10px 16px calc(10px + env(safe-area-inset-bottom));max-width:760px;margin:0 auto;border-top:1px solid var(--line)}
+  #log{max-height:26vh;overflow:auto;padding:8px 16px;max-width:920px;margin:0 auto}
+  .msg{margin:6px 0;font-size:14px}.msg.you{text-align:right;color:#cfd6e6}.msg.bot{color:var(--green)}
+  #bar{display:flex;gap:8px;padding:10px 16px calc(10px + env(safe-area-inset-bottom));max-width:920px;margin:0 auto;border-top:1px solid var(--line)}
   #bar input{flex:1;padding:11px 12px;border:1px solid var(--line);background:#0c0f14;color:var(--ink);border-radius:10px;font-size:15px}
   #bar button{padding:0 16px;border:0;background:var(--accent);color:#fff;border-radius:10px;font-size:15px;cursor:pointer}
+  #toast{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);background:#16233f;border:1px solid var(--accent);color:#dce8ff;padding:10px 16px;border-radius:10px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:60}
+  #toast.show{opacity:1}
+  @media(max-width:560px){.metrics{grid-template-columns:repeat(2,1fr)}}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="zlabel">The campaign — am I winning?</div>
-  <div class="panel" id="z1">Loading…</div>
-  <div class="zlabel">The field — where is everything?</div>
-  <div id="z2"></div>
-  <div class="zlabel">The threats — what's bleeding?</div>
-  <div class="panel" id="z3"><div class="empty">Loading…</div></div>
-  <div class="zlabel">The force — today's landing zone (you overrule anytime)</div>
-  <div id="z4"></div>
-  <div class="zlabel">The call-down — free space? work this list</div>
-  <div class="panel" id="z5"><div class="empty">Loading…</div></div>
+  <div class="panel" id="score"><div class="empty">Loading…</div></div>
+
+  <div class="tabbar" id="tabbar">
+    <button class="tab on" data-v="act">Open Activities</button>
+    <button class="tab" data-v="ppl">People</button>
+    <button class="tab" data-v="pipe">Pipeline</button>
+    <button class="tab" data-v="deal">Dealflow</button>
+  </div>
+
+  <div class="view on" id="v-act">
+    <div class="subhead">Everything to do — by category. Scope: overdue + next 3 weeks. Tap a category to collapse.</div>
+    <div id="cats"><div class="empty">Loading…</div></div>
+  </div>
+
+  <div class="view" id="v-ppl">
+    <div class="subhead">Your whole universe. Hover a name for the last note · tap a name to call/text.</div>
+    <div class="filt">
+      <input class="srch" id="psearch" placeholder="Search everyone…" autocomplete="off">
+      <div class="chiprow"><span class="lbl">Lane</span><span id="laneF"></span></div>
+      <div class="chiprow"><span class="lbl">Warmth</span><span id="warmF"></span></div>
+      <div class="chiprow"><span class="lbl">Community</span><span id="commF"></span></div>
+      <div class="chiprow"><span class="lbl">Scope</span><span id="scopeF"></span>
+        <span style="margin-left:auto"></span><span class="lbl">Sort</span>
+        <select class="sortsel" id="psort">
+          <option value="idle">Longest silent</option><option value="warmth">Warmth</option>
+          <option value="amount">$ Potential</option><option value="last">Last contact</option><option value="name">Name</option>
+        </select>
+      </div>
+    </div>
+    <div id="pplList"><div class="empty">Loading…</div></div>
+    <div class="countline" id="pplCount"></div>
+  </div>
+
+  <div class="view" id="v-pipe">
+    <div class="chips" id="laneChips"></div>
+    <div class="board" id="kanban"><div class="empty">Loading…</div></div>
+    <div class="hint">Drag a card to a new column to advance it (saves to Notion). Tap a name to edit stage / date / notes.</div>
+  </div>
+
+  <div class="view" id="v-deal">
+    <div class="chips" id="dealChips"></div>
+    <div id="dealTable"></div>
+    <div class="hint">Ladder: Intro 5% · Statements 20% · Stress Test 40% · Open+Fund 80% · Won 100%. Recalibrate as deals close.</div>
+  </div>
 </div>
 
 <div id="chat">
   <div id="log"><div class="msg bot">The helm. Log touches ("texted Lee, call Thu") or command ("show everyone at stress test").</div></div>
   <div id="bar"><input id="say" placeholder="Helm…" autocomplete="off" /><button onclick="send()">Send</button></div>
 </div>
+<div id="toast"></div>
 
 <script>
 const $=s=>document.querySelector(s);
 const digits=p=>(p||'').replace(/[^0-9+]/g,'');
-const fmt$=n=>!n?'':n>=1e6?'$'+(n/1e6).toFixed(1)+'M':n>=1e3?'$'+Math.round(n/1e3)+'K':'$'+n;
-let history=[], BOARD=null, CD=[];
+const fmt$=n=>!n?'':n>=1e6?'$'+(n/1e6).toFixed(2)+'M':n>=1e3?'$'+Math.round(n/1e3)+'K':'$'+n;
+const esc=s=>(s||'').replace(/'/g,'&#39;').replace(/"/g,'&quot;');
+const todayStr=new Date().toISOString().slice(0,10);
+const plus=d=>new Date(Date.now()+d*864e5).toISOString().slice(0,10);
+function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('show');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('show'),1900);}
+let history=[], FUNNEL=null, BOARD=null, CD=[], curLane='PM Retail', dealLane='PM Retail', dragId=null;
 
-function cardHTML(p,showStage){
+const PROB={'Intro/Reconnect':.05,'Statements + Intro to John':.20,'Stress Test':.40,'Open + Fund':.80,'Won':1,'Qualify':.05,'John Conversation':.20,'Due Diligence':.40,'Transition':.80,'Track-Record Review':.20,'Allocation':.80,'Exploring':.10,'Enrollment Conversation':.40,'Active':1,'Structuring':.40,'Identified':.10,'Intro Made':.40,'Not Now':0};
+const STAGES=['Intro/Reconnect','Statements + Intro to John','Stress Test','Open + Fund','Qualify','John Conversation','Due Diligence','Transition','Track-Record Review','Allocation','Exploring','Enrollment Conversation','Structuring','Identified','Intro Made','Active','Won','Not Now'];
+const shortStage=s=>(s||'—').replace('Statements + Intro to John','Stmts → John').replace('Intro/Reconnect','Intro').replace('Track-Record Review','Track Record').replace('Enrollment Conversation','Enrollment').replace('John Conversation','John Convo').replace('Due Diligence','Due Dil.');
+function laneExpected(L){let e=0;for(const st in L.stages){if(st==='Won')continue;e+=(L.stages[st].dollars||0)*(PROB[st]||0);}return e;}
+
+/* ---------- SCOREBOARD ---------- */
+function renderScore(){
+  if(!FUNNEL) return;
+  let won=0,open=0,exp=0;
+  for(const L of FUNNEL.lanes){ won+=L.wonDollars||0; open+=(L.dollars||0)-(L.wonDollars||0); exp+=laneExpected(L); }
+  const goal=FUNNEL.goal||1e7;
+  const pct=Math.min(100,won/goal*100), ep=Math.min(100-pct,exp/goal*100);
+  const m=FUNNEL.momentum||{};
+  $('#score').innerHTML=`
+    <div class="scoretop"><strong style="font-size:15px">Race to ${fmt$(goal)} retail AUM</strong>
+      <span style="font-size:12px;color:var(--muted)">${(won/goal*100).toFixed(1)}% won</span></div>
+    <div class="barOuter"><div style="width:${pct}%;background:var(--green)"></div><div style="width:${ep}%;background:rgba(52,211,153,.32)"></div></div>
+    <div class="metrics">
+      <div class="metric"><div class="k">Won / committed</div><div class="v">${fmt$(won)||'$0'}</div></div>
+      <div class="metric"><div class="k">Expected (weighted)</div><div class="v" style="color:var(--green)">${fmt$(Math.round(exp))||'$0'}</div></div>
+      <div class="metric"><div class="k">Open pipeline</div><div class="v">${fmt$(open)||'$0'}</div></div>
+      <div class="metric"><div class="k">This week</div><div class="v">+${m.entered||0}<span style="font-size:12px;color:var(--muted)"> · ${m.bookedAhead||0} booked</span></div></div>
+    </div>
+    ${BOARD&&BOARD.verdict?`<div class="verdict">⚖ ${BOARD.verdict}</div>`:''}`;
+}
+
+/* ---------- OPEN ACTIVITIES (categories from calldown) ---------- */
+const CATS=[
+  ['today','📅','Today’s calls','Booked — prep + show up'],
+  ['chase','🔴','Chase','Reached out, no reply — every 3 days, up to 4×, then Park'],
+  ['schedule','📞','Schedule a call','Ready to book (incl. bring John on)'],
+  ['statements','📄','Get statements','Collect statements to move toward Stress Test'],
+  ['promised','✅','Promised','What you said you’d send or do'],
+  ['event','🔥','Event follow-up','Four Rooms / event people — while warm'],
+  ['newoutreach','🆕','New outreach','Fresh prospects to open — throttled by the Capacity Rule'],
+  ['dark','🌑','Going dark','Real money or heat, slipping — rescue or release']
+];
+function classify(p){
+  const booked=/^\s*booked/i.test(p.nextStep||'');
+  if(booked && p.nextTouch===todayStr) return 'today';
+  if(p.stage==='Statements + Intro to John') return 'statements';
+  if(p.response==='Awaiting') return 'chase';
+  if(p.response==='Positive') return 'schedule';
+  if(/send|promis|invite|intro|owe/i.test(p.nextStep||'') && !booked) return 'promised';
+  if((p.source==='Austin'||p.source==='Community') && p.sinceDays==null) return 'event';
+  if((p.sinceDays==null||p.sinceDays>=14) && (p.warmth==='Hot'||(p.amount||0)>=100000)) return 'dark';
+  if(p.warmth==='Cold' && p.sinceDays==null) return 'newoutreach';
+  if(!p.nextTouch || p.nextTouch<=plus(21)) return 'schedule';
+  return null;
+}
+function renderCats(){
+  const wW={Hot:3,Warm:2,Cold:1};
+  const groups={}; for(const p of CD){const c=classify(p); if(c)(groups[c]=groups[c]||[]).push(p);}
+  let h='';
+  for(const [key,ico,ttl,hint] of CATS){
+    let items=(groups[key]||[]).sort((a,b)=>(wW[b.warmth]-wW[a.warmth])||((b.amount||0)-(a.amount||0)));
+    let extra='';
+    if(key==='newoutreach' && items.length>12){ extra=`<div class="cathint">Showing 12 of ${items.length} parked — pull more when capacity opens.</div>`; items=items.slice(0,12); }
+    const closed=(key==='newoutreach')?'closed':'';
+    h+=`<div class="cat ${closed}" data-k="${key}">
+      <div class="cathead" onclick="this.parentNode.classList.toggle('closed')">
+        <span class="ico">${ico}</span><span class="ttl">${ttl}</span>
+        <span class="ct">${(groups[key]||[]).length}</span><span class="car">▾</span></div>
+      <div class="catbody"><div class="cathint">${hint}</div>${extra}`;
+    h+= items.length? items.map(card).join('') : '<div class="empty">Clear.</div>';
+    h+=`</div></div>`;
+  }
+  $('#cats').innerHTML=h;
+}
+function card(p){
+  const sub=[p.lane,shortStage(p.stage)].filter(Boolean).join(' · ');
   const d=digits(p.phone);
-  return `<div class="card"><div class="row"><div>
-    <div class="name">${p.name}</div>
-    <div class="tags"><span class="dot ${p.warmth}"></span>${[p.warmth,p.lane,showStage?p.stage:''].filter(Boolean).join(' · ')}</div>
+  const ctx=p.nextStep||(p.sinceDays!=null?`${p.sinceDays}d since last contact`:'never contacted');
+  return `<div class="card">
+    <div class="crow"><div>
+      <div class="nm"><span class="dot ${p.warmth}"></span>${p.name||''}</div>
+      <div class="meta">${sub}</div>
     </div>${p.amount?`<div class="amt">${fmt$(p.amount)}</div>`:''}</div>
-    ${p.nextStep?`<div class="next">➤ ${p.nextStep}</div>`:''}
-    <div class="actions">
-      ${d?`<a class="btn call" href="tel:${d}">Call</a><a class="btn" href="sms:${d}">Text</a>`:'<span class="tags">no number</span>'}
-      <button class="btn done" onclick="quick('${p.id}','${(p.name||'').replace(/'/g,'')}')">Reached → next week</button>
+    ${ctx?`<div class="ctx">➜ ${ctx}</div>`:''}
+    <div class="acts">
+      ${d?`<a class="b call" href="tel:${d}">Call</a><a class="b text" href="sms:${d}">Text</a>`:'<span class="meta">no number</span>'}
+      <button class="b book" onclick="oBook('${p.id}')">Booked</button>
+      <button class="b warm" onclick="oWarm('${p.id}')">Warm</button>
+      <button class="b no" onclick="oNo('${p.id}')">No answer</button>
+      <button class="b adv" onclick="openPerson('${p.id}','${esc(p.stage||'')}')">Advance</button>
+      <button class="b" onclick="oSent('${p.id}')">Sent</button>
+      <button class="b pass" onclick="oPass('${p.id}')">Not now</button>
+      <button class="b" onclick="oNote('${p.id}')">Note</button>
     </div></div>`;
 }
+async function cap(id,body,msg){ try{ await fetch('/api/capture',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,...body})}); toast(msg);}catch(e){toast('error');} refresh(); }
+function oBook(id){const d=prompt('Call date (YYYY-MM-DD):',plus(3)); if(d)cap(id,{next_touch:d,next_step:'Booked: call',last_contact:todayStr},'Booked '+d);}
+function oWarm(id){cap(id,{response:'Positive',next_touch:plus(4),last_contact:todayStr},'Warm — back in 4d');}
+function oNo(id){cap(id,{response:'Awaiting',next_touch:plus(3),last_contact:todayStr,notes_append:'No answer — chasing'},'Chase again in 3d');}
+function oSent(id){const w=prompt('Sent what? (statements / John intro / link…)'); if(w!==null)cap(id,{next_touch:plus(3),last_contact:todayStr,notes_append:'Sent: '+w},'Logged — follow up 3d');}
+function oPass(id){cap(id,{stage:'Not Now'},'Moved to Not Now');}
+function oNote(id){const t=prompt('Note:'); if(t)cap(id,{notes_append:t,last_contact:todayStr},'Note saved');}
 
-async function loadFunnel(){
-  const r=await fetch('/api/funnel'); const f=await r.json();
-  if(f.error){ $('#z1').textContent='Error: '+f.error; return; }
-  let won=0,motion=0;
-  for(const L of f.lanes){ won+=L.wonDollars; motion+=L.dollars-L.wonDollars; }
-  const pct=Math.min(100,won/f.goal*100), mp=Math.min(100-pct,motion/f.goal*100);
-  const m=f.momentum||{};
-  $('#z1').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:baseline">
-    <strong style="font-size:14.5px">Road to ${fmt$(f.goal)}</strong>
-    <span style="font-size:12px;color:var(--muted)">${fmt$(won)||'$0'} won · ${fmt$(motion)} in motion</span></div>
-    <div class="barOuter"><div style="width:${pct}%;background:var(--green)"></div><div style="width:${mp}%;background:rgba(96,165,250,.45)"></div></div>
-    <div class="scoreRow"><span>This week: +${m.entered||0} entered (${fmt$(m.enteredD)||'$0'}) · ${m.bookedAhead||0} calls booked ahead</span><span>${(won/f.goal*100).toFixed(1)}%</span></div>
-    <div class="verdict" id="verdictLine"></div>`;
-  if(BOARD) $('#verdictLine').textContent=BOARD.verdict;
-  const host=$('#z2'); host.innerHTML='';
-  const top=f.lanes.find(L=>L.lane==='PM Retail');
-  if(top){
-    const path=f.lanePaths['PM Retail'].filter(st=>st!=='Won');
-    const cells=path.map(st=>{
-      const c=top.stages[st]||{count:0,dollars:0};
-      return `<div class="stagecell ${c.count?'haspeople':''}" onclick="toggleDrawer(this,'PM Retail','${st.replace(/'/g,'')}')">
-        <div class="stN">${c.count||'·'}</div><div class="stM">${c.count?fmt$(c.dollars):''}</div><div class="stD">${st.replace('Statements + Intro to John','Stmts→John').replace('Intro/Reconnect','Intro')}</div></div>`;}).join('');
-    const el=document.createElement('div'); el.className='panel'; el.dataset.lane='PM Retail';
-    el.innerHTML=`<div class="laneHead"><span class="laneName">PM Retail (AUM)</span><span class="laneTot">${top.count} · ${fmt$(top.dollars)}${top.won?` · <span style="color:var(--green)">${top.won} won</span>`:''}</span></div>
-      <div class="rail">${cells}</div>${f.read?`<div class="read">⚠ ${f.read}</div>`:''}<div class="drawer"></div>`;
-    host.appendChild(el);
-  }
-  const minis=document.createElement('div'); minis.className='minis';
-  for(const L of f.lanes){
-    if(L.lane==='PM Retail'||(L.lane==='Unsorted'&&L.count<2)) continue;
-    const stages=Object.entries(L.stages).filter(([s,c])=>c.count).map(([s,c])=>`${c.count} ${s}`).slice(0,2).join(' · ');
-    const mv=document.createElement('div'); mv.className='mini';
-    mv.innerHTML=`<b>${L.lane}</b> <span style="float:right">${L.count}${L.dollars?' · '+fmt$(L.dollars):''}</span><br><span>${stages||'—'}</span>`;
-    minis.appendChild(mv);
-  }
-  host.appendChild(minis);
-  window.__funnel=f;
+/* ---------- PEOPLE ---------- */
+let pf={lane:'All',warm:'All',comm:'All',scope:'All',q:'',sort:'idle'};
+function chip(g,v,cur){return `<span class="chip ${cur===v?'on':''}" onclick="setF('${g}','${v}')">${v}</span>`;}
+function renderFilters(){
+  $('#laneF').innerHTML=['All','PM Retail','Advisor Recruit','Connector/JV','Coaching','AIM Allocation','Partnership/JV'].map(v=>chip('lane',v,pf.lane)).join('');
+  $('#warmF').innerHTML=['All','Hot','Warm','Cold'].map(v=>chip('warm',v,pf.warm)).join('');
+  $('#commF').innerHTML=['All','Four Rooms','Not Done Yet','Maverick1000','Reset'].map(v=>chip('comm',v,pf.comm)).join('');
+  $('#scopeF').innerHTML=['All','Active','Reservoir'].map(v=>chip('scope',v,pf.scope)).join('');
 }
-
-function toggleDrawer(cell,lane,stage){
-  const laneEl=cell.closest('.panel'); const drawer=laneEl.querySelector('.drawer');
-  const was=cell.classList.contains('sel');
-  laneEl.querySelectorAll('.stagecell').forEach(c=>c.classList.remove('sel'));
-  if(was){ drawer.style.display='none'; drawer.innerHTML=''; return; }
-  cell.classList.add('sel');
-  const L=window.__funnel.lanes.find(l=>l.lane===lane);
-  const people=(L&&L.people[stage])||[];
-  drawer.innerHTML=people.length?people.map(p=>cardHTML({...p,lane,stage:''},false)).join(''):'<div class="empty">No one here yet.</div>';
-  drawer.style.display='block';
-}
-
-async function loadBoard(){
-  const r=await fetch('/api/board'); const b=await r.json();
-  if(b.error){ $('#z3').textContent='Error: '+b.error; return; }
-  BOARD=b; const vl=$('#verdictLine'); if(vl) vl.textContent=b.verdict;
-  const get=k=>(b.sections.find(s=>s.key===k)||{}).items||[];
-  const dark=get('dark'), nudge=get('nudge');
-  const rows=[];
-  for(const p of dark.slice(0,6)) rows.push(`<div class="threat"><span class="who">${p.amount?`<span style="color:#ef6a5f;font-weight:600">${fmt$(p.amount)}</span> `:''}${p.name} — ${p.stage}${p.lastContact?'':' · never touched'}</span><span class="tag">rescue</span></div>`);
-  if(nudge.length) rows.push(`<div class="threat"><span class="who">${nudge.length} awaiting reply</span><span class="tag">nudge if 2d+ quiet</span></div>`);
-  $('#z3').innerHTML=rows.join('')||'<div class="empty">Nothing bleeding. 👊</div>';
-  const host=$('#z4'); host.innerHTML='';
-  const today=get('today'), owe=get('owe'), fresh=get('fresh'), due=get('due');
-  let u=[]; try{ u=await (await fetch('/api/upcoming')).json(); }catch(e){}
-  for(const p of today) host.insertAdjacentHTML('beforeend',cardHTML(p,true));
-  owe.slice(0,8).forEach((p,i)=>{ host.insertAdjacentHTML('beforeend',cardHTML(p,true).replace('<div class="name">',`<div class="name"><span style="color:var(--blue);font-size:12px;font-weight:700">MOVE ${i+1} · </span>`)); });
-  for(const p of fresh.slice(0,4)) host.insertAdjacentHTML('beforeend',cardHTML(p,true));
-  if(Array.isArray(u)&&u.length){
-    const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-    const lines=u.slice(0,8).map(p=>{const dt=new Date(p.nextTouch+'T12:00:00');return `<div class="threat"><span class="who"><b style="color:var(--blue)">${days[dt.getDay()]} ${dt.getMonth()+1}/${dt.getDate()}</b> ${p.name}${p.amount?' · <span style=\"color:var(--green)\">'+fmt$(p.amount)+'</span>':''}</span><span class="tag">${(p.nextStep||'').slice(0,28)}</span></div>`;}).join('');
-    host.insertAdjacentHTML('beforeend',`<div class="panel" style="margin-top:8px"><div style="font-size:12.5px;color:var(--muted);margin-bottom:4px">🗓 Booked ahead</div>${lines}</div>`);
-  }
-  const rest=owe.length-8+due.length;
-  if(rest>0) host.insertAdjacentHTML('beforeend',`<div class="collapsed-note">+ ${rest} more due — they're in the call-down below</div>`);
-}
-
-let cdSort='since';
-async function loadCalldown(){
-  const r=await fetch('/api/calldown'); CD=await r.json();
-  if(CD.error){ $('#z5').textContent='Error: '+CD.error; return; }
-  renderCD();
-}
-function renderCD(){
+function setF(g,v){pf[g]=v;renderFilters();renderPpl();}
+function renderPpl(){
   const wW={Hot:3,Warm:2,Cold:1};
-  let list=[...CD];
-  if(cdSort==='since') list.sort((a,b)=>(b.sinceDays??9999)-(a.sinceDays??9999));
-  if(cdSort==='warmth') list.sort((a,b)=>(wW[b.warmth]||0)-(wW[a.warmth]||0)||(b.sinceDays??0)-(a.sinceDays??0));
-  if(cdSort==='money') list.sort((a,b)=>(b.amount||0)-(a.amount||0));
-  const rows=list.slice(0,60).map(p=>{const d=digits(p.phone);
-    return `<div class="cd"><span><span class="dot ${p.warmth}"></span>${p.name}${p.amount?` <span style="color:var(--green);font-size:12px">${fmt$(p.amount)}</span>`:''}<br><span style="font-size:11.5px;color:var(--muted)">${[p.lane,p.stage].filter(Boolean).join(' · ')}</span></span>
-      <span style="display:flex;align-items:center;gap:8px"><span class="since">${p.sinceDays==null?'never':p.sinceDays+'d ago'}</span>${d?`<a href="tel:${d}">Call</a>`:''}</span></div>`;}).join('');
-  $('#z5').innerHTML=`<div class="sorts">
-      <button class="${cdSort==='since'?'on':''}" onclick="cdSort='since';renderCD()">Longest silent</button>
-      <button class="${cdSort==='warmth'?'on':''}" onclick="cdSort='warmth';renderCD()">Warmth</button>
-      <button class="${cdSort==='money'?'on':''}" onclick="cdSort='money';renderCD()">$</button>
-    </div>${rows||'<div class="empty">Empty.</div>'}
-    <div class="collapsed-note">${CD.length} active relationships on the list</div>`;
+  let list=CD.filter(p=>
+    (pf.lane==='All'||p.lane===pf.lane)&&
+    (pf.warm==='All'||p.warmth===pf.warm)&&
+    (pf.comm==='All'||(p.community||'').includes(pf.comm))&&
+    (pf.scope==='All'||p.scope===pf.scope)&&
+    (!pf.q||(p.name||'').toLowerCase().includes(pf.q.toLowerCase())));
+  const s=pf.sort, idle=p=>p.sinceDays==null?99999:p.sinceDays;
+  list.sort((a,b)=> s==='name'?(a.name||'').localeCompare(b.name||''): s==='warmth'?(wW[b.warmth]-wW[a.warmth]): s==='amount'?((b.amount||0)-(a.amount||0)): s==='last'?(idle(a)-idle(b)): (idle(b)-idle(a)));
+  $('#pplList').innerHTML=list.map((p,i)=>`
+    <div class="prow" onmouseenter="showTip(this,${i})" onmouseleave="hideTip(this)">
+      <div>
+        <div class="pn" onclick="event.stopPropagation();showPop(this,'${esc(p.name)}','${digits(p.phone)}')"><span class="dot ${p.warmth}"></span>${p.name||''}</div>
+        <div class="pm">${[p.lane,shortStage(p.stage),p.community].filter(Boolean).join(' · ')}</div>
+      </div>
+      <div class="idle">${p.amount?`<div class="pamt">${fmt$(p.amount)}</div>`:''}<div>${p.sinceDays==null?'<b>never</b>':'<b>'+p.sinceDays+'d</b> silent'}</div></div>
+    </div>`).join('')||'<div class="empty">No matches.</div>';
+  $('#pplCount').textContent=`${list.length} shown · ${CD.length} active in the universe`;
+  window._plist=list;
+}
+function showTip(row,i){hideAllTips();const p=window._plist[i];if(!p)return;const t=document.createElement('div');t.className='tip';const last=p.sinceDays==null?'never contacted':p.sinceDays+'d ago';t.innerHTML=`<div class="th">Last interaction · ${last}</div>${esc(p.notes)||esc(p.nextStep)||'—'}`;row.appendChild(t);}
+function hideTip(row){const t=row.querySelector('.tip');if(t)t.remove();}
+function hideAllTips(){document.querySelectorAll('.tip,.pop').forEach(e=>e.remove());}
+function showPop(el,name,d){hideAllTips();const row=el.closest('.prow');const pop=document.createElement('div');pop.className='pop';pop.innerHTML=(d?`<a class="b call" href="tel:${d}">Call</a><a class="b text" href="sms:${d}">Text</a>`:'<span class="meta">no number</span>')+`<button class="b" onclick="$('#say').value='${name}: ';document.querySelector('[data-v=act]')&&0;">Log</button>`;row.appendChild(pop);setTimeout(()=>document.addEventListener('click',function h(){hideAllTips();document.removeEventListener('click',h);}),60);}
+
+/* ---------- PIPELINE (kanban) ---------- */
+function renderLaneChips(){
+  const present=FUNNEL.lanes.filter(L=>L.lane&&L.lane!=='Unsorted').map(L=>L.lane);
+  const order=['PM Retail','Advisor Recruit','AIM Allocation','Partnership/JV','Connector/JV','Coaching','Referral'];
+  const lanes=order.filter(l=>present.includes(l)).concat(present.filter(l=>!order.includes(l)));
+  if(!lanes.includes(curLane)) curLane=lanes[0]||'PM Retail';
+  $('#laneChips').innerHTML=lanes.map(l=>{const L=FUNNEL.lanes.find(x=>x.lane===l)||{count:0};
+    return `<button class="chip ${l===curLane?'on':''}" onclick="curLane='${esc(l)}';renderLaneChips();renderKanban()">${l} <span style="opacity:.6">${L.count||0}</span></button>`;}).join('');
+}
+function renderKanban(){
+  const L=FUNNEL.lanes.find(x=>x.lane===curLane);
+  const path=(FUNNEL.lanePaths[curLane]||['Intro/Reconnect','Active','Won']);
+  if(!L){ $('#kanban').innerHTML='<div class="empty">No deals in this lane yet.</div>'; return; }
+  $('#kanban').innerHTML=path.map(st=>{
+    const c=L.stages[st]||{count:0,dollars:0}; const exp=Math.round((c.dollars||0)*(PROB[st]||0));
+    const people=(L.people[st]||[]);
+    const cards=people.length?people.map(p=>`
+      <div class="kcard" draggable="true" data-id="${p.id}" ondragstart="dragId='${p.id}'" onclick="openPerson('${p.id}','${esc(st)}')">
+        <div class="knm"><span><span class="dot ${p.warmth}"></span>${p.name||''}</span>${p.amount?`<span class="kamt">${fmt$(p.amount)}</span>`:''}</div>
+        ${p.nextStep?`<div class="knx">➤ ${p.nextStep}</div>`:''}</div>`).join(''):'<div class="colempty">—</div>';
+    return `<div class="col" ondragover="dropOver(event,this)" ondragleave="this.classList.remove('drop')" ondrop="dropCard(event,this,'${esc(st)}')">
+      <div class="colhead"><span class="t">${shortStage(st)}</span><span class="n">${c.count||0}</span></div>
+      <div class="colsub">${fmt$(c.dollars||0)||'$0'}${exp?` · <span class="e">${fmt$(exp)} exp</span>`:''}</div>${cards}</div>`;
+  }).join('');
+}
+function dropOver(e,col){ e.preventDefault(); col.classList.add('drop'); }
+async function dropCard(e,col,stage){ e.preventDefault(); col.classList.remove('drop'); if(!dragId)return; const id=dragId;dragId=null;
+  await fetch('/api/capture',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,stage})});
+  toast('Moved to '+shortStage(stage)); await loadFunnel(); renderLaneChips(); renderKanban(); renderDeal(); }
+
+/* ---------- DEALFLOW ---------- */
+function renderDeal(){
+  if(!FUNNEL) return;
+  const present=FUNNEL.lanes.filter(L=>L.lane&&L.lane!=='Unsorted').map(L=>L.lane);
+  if(!present.includes(dealLane)) dealLane=present.includes('PM Retail')?'PM Retail':present[0];
+  $('#dealChips').innerHTML=present.map(l=>`<button class="chip ${l===dealLane?'on':''}" onclick="dealLane='${esc(l)}';renderDeal()">${l}</button>`).join('');
+  const L=FUNNEL.lanes.find(x=>x.lane===dealLane); if(!L){$('#dealTable').innerHTML='';return;}
+  const path=(FUNNEL.lanePaths[dealLane]||[]); let raw=0,exp=0,cnt=0,rows='';
+  for(const st of path){ if(st==='Won')continue; const c=L.stages[st]||{count:0,dollars:0}; const pr=PROB[st]||0; const e=Math.round((c.dollars||0)*pr);
+    raw+=c.dollars||0; exp+=e; cnt+=c.count||0;
+    rows+=`<tr><td>${shortStage(st)}</td><td>${c.count||0}</td><td>${fmt$(c.dollars||0)||'$0'}</td><td>${Math.round(pr*100)}%</td><td style="color:var(--green)">${fmt$(e)||'$0'}</td></tr>`;}
+  let allExp=0; for(const x of FUNNEL.lanes) allExp+=laneExpected(x);
+  $('#dealTable').innerHTML=`<table class="deal"><thead><tr><th>Stage</th><th>Deals</th><th>Raw $</th><th>Prob</th><th>Expected</th></tr></thead>
+    <tbody>${rows}<tr class="tot"><td>Total · ${dealLane}</td><td>${cnt}</td><td>${fmt$(raw)||'$0'}</td><td></td><td style="color:var(--green)">${fmt$(exp)||'$0'}</td></tr></tbody></table>
+    <div class="hint" style="margin-top:10px">All lanes combined expected: <span style="color:var(--green)">${fmt$(Math.round(allExp))||'$0'}</span></div>`;
 }
 
-async function quick(id,name){
-  const d=new Date(Date.now()+7*864e5).toISOString().slice(0,10);
-  await fetch('/api/capture',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({id,last_contact:new Date().toISOString().slice(0,10),next_touch:d,notes_append:'Reached out (quick log).'})});
-  log('bot','Logged '+name+' — next touch in a week.'); refresh();
+/* ---------- PERSON EDITOR (Advance / edit) ---------- */
+function openPerson(id,stage){
+  let box=document.getElementById('editor'); if(box) box.remove();
+  const opts=STAGES.map(s=>`<option ${s===stage?'selected':''}>${s}</option>`).join('');
+  box=document.createElement('div'); box.id='editor';
+  box.style.cssText='position:fixed;left:50%;top:16%;transform:translateX(-50%);width:min(92vw,420px);background:#161a22;border:1px solid var(--accent);border-radius:14px;padding:16px;z-index:70';
+  box.innerHTML=`<div style="font-size:13px;color:var(--muted);margin-bottom:8px">Update record</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <select id="eStage" style="flex:1;min-width:150px;padding:9px;background:#0c0f14;color:var(--ink);border:1px solid var(--line);border-radius:8px;font-size:13px">${opts}</select>
+      <input type="date" id="eDate" style="padding:8px;background:#0c0f14;color:var(--ink);border:1px solid var(--line);border-radius:8px;font-size:13px">
+    </div>
+    <textarea id="eNote" placeholder="What happened / note…" rows="3" style="width:100%;margin-top:9px;padding:9px;background:#0c0f14;color:var(--ink);border:1px solid var(--line);border-radius:8px;font-size:13px"></textarea>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="b book" style="flex:1" onclick="savePerson('${id}')">Save</button>
+      <button class="b" onclick="document.getElementById('editor').remove()">Cancel</button></div>`;
+  document.body.appendChild(box);
 }
-function log(who,text){ const l=$('#log'); const m=document.createElement('div'); m.className='msg '+who; m.textContent=text; l.appendChild(m); l.scrollTop=l.scrollHeight; }
+async function savePerson(id){
+  const box=document.getElementById('editor'); if(!box)return; const body={id};
+  const st=box.querySelector('#eStage').value; if(st)body.stage=st;
+  const dt=box.querySelector('#eDate').value; if(dt)body.next_touch=dt;
+  const nt=box.querySelector('#eNote').value.trim(); if(nt){body.notes_append=nt;body.last_contact=todayStr;}
+  box.remove(); await fetch('/api/capture',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); toast('Updated'); refresh();
+}
+
+/* ---------- CHAT ---------- */
+function log(who,text){const l=$('#log');const m=document.createElement('div');m.className='msg '+who;m.textContent=text;l.appendChild(m);l.scrollTop=l.scrollHeight;}
 async function send(){
-  const v=$('#say').value.trim(); if(!v) return;
-  $('#say').value=''; log('you',v); history.push({role:'user',content:v}); log('bot','…');
-  try{
-    const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:history})});
-    const j=await r.json(); $('#log').lastChild.remove();
-    log('bot', j.reply||j.error||'done'); if(j.messages) history=j.messages; refresh();
+  const v=$('#say').value.trim(); if(!v)return; $('#say').value=''; log('you',v); history.push({role:'user',content:v}); log('bot','…');
+  try{ const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:history})});
+    const j=await r.json(); $('#log').lastChild.remove(); log('bot',j.reply||j.error||'done'); if(j.messages)history=j.messages; refresh();
   }catch(e){ $('#log').lastChild.remove(); log('bot','error: '+e.message); }
 }
-$('#say').addEventListener('keydown',e=>{ if(e.key==='Enter') send(); });
-function refresh(){ loadFunnel(); loadBoard(); loadCalldown(); }
+
+/* ---------- TABS + LOAD ---------- */
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x===t));
+  document.querySelectorAll('.view').forEach(v=>v.classList.toggle('on',v.id==='v-'+t.dataset.v));
+}));
+$('#say').addEventListener('keydown',e=>{if(e.key==='Enter')send();});
+$('#psearch').addEventListener('input',e=>{pf.q=e.target.value;renderPpl();});
+$('#psort').addEventListener('change',e=>{pf.sort=e.target.value;renderPpl();});
+
+async function loadFunnel(){const r=await fetch('/api/funnel');FUNNEL=await r.json();}
+async function loadBoard(){try{const r=await fetch('/api/board');BOARD=await r.json();}catch(e){BOARD=null;}}
+async function loadCalldown(){const r=await fetch('/api/calldown');CD=await r.json();if(!Array.isArray(CD))CD=[];}
+async function refresh(){
+  await Promise.all([loadFunnel(),loadBoard(),loadCalldown()]);
+  if(FUNNEL&&FUNNEL.error){$('#score').innerHTML='<div class="empty">Error: '+FUNNEL.error+'</div>';return;}
+  renderScore(); renderCats(); renderFilters(); renderPpl(); renderLaneChips(); renderKanban(); renderDeal();
+}
 refresh();
 </script>
 </body>
