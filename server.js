@@ -97,7 +97,7 @@ function classify(o) {
   return 'due';
 }
 const wW = { Hot: 3, Warm: 2, Cold: 1 };
-const STAGE_W = { 'Open + Fund': 50, 'Transition': 50, 'Allocation': 45, 'Structuring': 40, 'Stress Test': 35, 'Due Diligence': 35, 'Enrollment Conversation': 30, 'Intro Made': 25, 'John Conversation': 22, 'Track-Record Review': 22, 'Statements + Intro to John': 20, 'Active': 15, 'Exploring': 10, 'Qualify': 8, 'Identified': 6, 'Intro/Reconnect': 5 };
+const STAGE_W = { 'Open + Fund': 50, 'Transition': 50, 'Allocation': 45, 'Structuring': 40, 'Stress Test': 35, 'Due Diligence': 35, 'Enrollment Conversation': 30, 'Intro Made': 25, 'John Conversation': 22, 'Track-Record Review': 22, 'Statements + Intro to John': 20, 'Discovery Call': 12, 'Active': 15, 'Exploring': 10, 'Qualify': 8, 'Identified': 6, 'Intro/Reconnect': 5 };
 const score = o => (STAGE_W[o.stage] || 0) * 1e7 + (wW[o.warmth] || 0) * 1e6 + (o.amount || 0);
 const SECTIONS = [
   ['today', "📅 Today's calls", 'Booked — prep, show up'],
@@ -123,7 +123,7 @@ app.get('/api/board', async (req, res) => {
 
 // ---- FUNNEL / SCOREBOARD (all active, grouped lane x stage) ----
 const LANE_PATHS = {
-  'PM Retail': ['Intro/Reconnect', 'Statements + Intro to John', 'Stress Test', 'Open + Fund', 'Won'],
+  'PM Retail': ['Intro/Reconnect', 'Discovery Call', 'Statements + Intro to John', 'Stress Test', 'Open + Fund', 'Won'],
   'Advisor Recruit': ['Qualify', 'John Conversation', 'Due Diligence', 'Transition', 'Won'],
   'AIM Allocation': ['Intro/Reconnect', 'Track-Record Review', 'Allocation', 'Won'],
   'Coaching': ['Exploring', 'Enrollment Conversation', 'Active', 'Won'],
@@ -152,7 +152,7 @@ app.get('/api/funnel', async (req, res) => {
       const st = o.stage || '—';
       L.stages[st] = L.stages[st] || { count: 0, dollars: 0 };
       L.stages[st].count++; L.stages[st].dollars += o.amount || 0;
-      (L.people[st] = L.people[st] || []).push({ id: o.id, name: o.name, amount: o.amount, warmth: o.warmth, nextStep: o.nextStep, nextTouch: o.nextTouch, phone: o.phone });
+      (L.people[st] = L.people[st] || []).push({ id: o.id, name: o.name, amount: o.amount, warmth: o.warmth, nextStep: o.nextStep, notes: o.notes, nextTouch: o.nextTouch, phone: o.phone });
     }
     for (const k in lanes) for (const st in lanes[k].people) lanes[k].people[st].sort((a,b)=>(b.amount||0)-(a.amount||0));
     const wk = Date.now() - 7 * 864e5;
