@@ -75,6 +75,7 @@
   .colhead{display:flex;justify-content:space-between;align-items:baseline}
   .colhead .t{font-size:12.5px;font-weight:650}.colhead .n{font-size:12px;color:var(--muted)}
   .colsub{font-size:11px;color:var(--muted);margin-top:1px}.colsub .e{color:var(--green)}
+  .col .ksort{width:100%;margin:6px 0 2px;font-size:10.5px;background:#0c0f14;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:3px 4px}
   .kcard{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:9px 10px;margin-top:8px;cursor:grab;position:relative}
   .kcard .knm{font-weight:600;font-size:13.5px;display:flex;justify-content:space-between;gap:6px}
   .kcard .kamt{color:var(--green);font-size:12px;white-space:nowrap}
@@ -170,7 +171,7 @@ const htmlesc=s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g
 const todayStr=new Date().toISOString().slice(0,10);
 const plus=d=>new Date(Date.now()+d*864e5).toISOString().slice(0,10);
 function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('show');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('show'),1900);}
-let history=[], FUNNEL=null, BOARD=null, CD=[], curLane='PM Retail', dealLane='PM Retail', dragId=null;
+let history=[], FUNNEL=null, BOARD=null, CD=[], curLane='PM Retail', dealLane='PM Retail', dragId=null, kSort={};
 
 const PROB={'Intro/Reconnect':.05,'Discovery Call':.12,'Statements + Intro to John':.20,'Stress Test':.40,'Open + Fund':.80,'Won':1,'Qualify':.05,'John Conversation':.20,'Due Diligence':.40,'Transition':.80,'Track-Record Review':.20,'Allocation':.80,'Exploring':.10,'Enrollment Conversation':.40,'Active':1,'Structuring':.40,'Identified':.10,'Intro Made':.40,'Not Now':0};
 const STAGES=['Intro/Reconnect','Discovery Call','Statements + Intro to John','Stress Test','Open + Fund','Qualify','John Conversation','Due Diligence','Transition','Track-Record Review','Allocation','Exploring','Enrollment Conversation','Structuring','Identified','Intro Made','Active','Won','Not Now'];
@@ -315,6 +316,10 @@ function hideAllTips(){document.querySelectorAll('.tip,.pop').forEach(e=>e.remov
 function showPop(el,name,d){hideAllTips();const row=el.closest('.prow');const pop=document.createElement('div');pop.className='pop';pop.innerHTML=(d?`<a class="b call" href="tel:${d}">Call</a><a class="b text" href="sms:${d}">Text</a>`:'<span class="meta">no number</span>')+`<button class="b" onclick="$('#say').value='${name}: ';document.querySelector('[data-v=act]')&&0;">Log</button>`;row.appendChild(pop);setTimeout(()=>document.addEventListener('click',function h(){hideAllTips();document.removeEventListener('click',h);}),60);}
 
 /* ---------- PIPELINE (kanban) ---------- */
+const wW3={Hot:3,Warm:2,Cold:1};
+function kIdle(p){return p.lastContact?Math.floor((Date.now()-new Date(p.lastContact))/864e5):99999;}
+function kcmp(sk){return (a,b)=> sk==='warmth'?(wW3[b.warmth]-wW3[a.warmth]): sk==='name'?((a.name||'').localeCompare(b.name||'')): sk==='next'?(((a.nextTouch||'9999-12-31'))<((b.nextTouch||'9999-12-31'))?-1:1): sk==='idle'?(kIdle(b)-kIdle(a)): ((b.amount||0)-(a.amount||0));}
+function setKSort(st,v){kSort[st]=v;renderKanban();}
 function renderLaneChips(){
   const present=FUNNEL.lanes.filter(L=>L.lane).map(L=>L.lane);
   const order=['PM Retail','Advisor Recruit','AIM Allocation','Partnership/JV','Connector/JV','Coaching','Referral'];
@@ -331,14 +336,16 @@ function renderKanban(){
   const path=[...path0,...extra];
   $('#kanban').innerHTML=path.map(st=>{
     const c=L.stages[st]||{count:0,dollars:0}; const exp=Math.round((c.dollars||0)*(PROB[st]||0));
-    const people=(L.people[st]||[]);
+    const sk=kSort[st]||'amount';
+    const people=[...(L.people[st]||[])].sort(kcmp(sk));
+    const sortSel=`<select class="ksort" onchange="setKSort('${esc(st)}',this.value)">${[['amount','$'],['warmth','Warmth'],['name','Name'],['next','Next touch'],['idle','Longest silent']].map(([v,l])=>`<option value="${v}"${sk===v?' selected':''}>${l}</option>`).join('')}</select>`;
     const cards=people.length?people.map(p=>{const note=[p.nextStep,p.notes].filter(Boolean).join('\n');return `
       <div class="kcard" draggable="true" data-id="${p.id}" ondragstart="dragId='${p.id}'" onclick="openPerson('${p.id}','${esc(st)}')">
         <div class="knm"><span><span class="dot ${p.warmth}"></span>${p.name||''}</span>${p.amount?`<span class="kamt">${fmt$(p.amount)}</span>`:''}</div>
         ${note?`<span class="ktag">📝 note</span><div class="knote">${htmlesc(note)}</div>`:''}</div>`;}).join(''):'<div class="colempty">—</div>';
     return `<div class="col" ondragover="dropOver(event,this)" ondragleave="this.classList.remove('drop')" ondrop="dropCard(event,this,'${esc(st)}')">
       <div class="colhead"><span class="t">${shortStage(st)}</span><span class="n">${c.count||0}</span></div>
-      <div class="colsub">${fmt$(c.dollars||0)||'$0'}${exp?` · <span class="e">${fmt$(exp)} exp</span>`:''}</div>${cards}</div>`;
+      <div class="colsub">${fmt$(c.dollars||0)||'$0'}${exp?` · <span class="e">${fmt$(exp)} exp</span>`:''}</div>${sortSel}${cards}</div>`;
   }).join('');
 }
 function dropOver(e,col){ e.preventDefault(); col.classList.add('drop'); }

@@ -152,7 +152,7 @@ app.get('/api/funnel', async (req, res) => {
       const st = o.stage || '—';
       L.stages[st] = L.stages[st] || { count: 0, dollars: 0 };
       L.stages[st].count++; L.stages[st].dollars += o.amount || 0;
-      (L.people[st] = L.people[st] || []).push({ id: o.id, name: o.name, amount: o.amount, warmth: o.warmth, nextStep: o.nextStep, notes: o.notes, nextTouch: o.nextTouch, phone: o.phone });
+      (L.people[st] = L.people[st] || []).push({ id: o.id, name: o.name, amount: o.amount, warmth: o.warmth, nextStep: o.nextStep, notes: o.notes, nextTouch: o.nextTouch, lastContact: o.lastContact, phone: o.phone });
     }
     for (const k in lanes) for (const st in lanes[k].people) lanes[k].people[st].sort((a,b)=>(b.amount||0)-(a.amount||0));
     const wk = Date.now() - 7 * 864e5;
