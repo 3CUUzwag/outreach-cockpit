@@ -244,7 +244,7 @@ app.get('/api/today', async (req, res) => {
   try { res.json(await queryDue()); } catch (e) { res.status(500).json({ error: e.message }); }
 });
 app.post('/api/capture', async (req, res) => {
-  try { res.json(await updateOpp(req.body.id, req.body)); } catch (e) { res.status(500).json({ error: e.message }); }
+  try { const out = await updateOpp(req.body.id, req.body); funnelCache = { t: 0, data: null }; res.json(out); } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 const tools = [

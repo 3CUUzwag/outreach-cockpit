@@ -146,7 +146,7 @@
   <div class="view" id="v-pipe">
     <div class="chips" id="laneChips"></div>
     <div class="board" id="kanban"><div class="empty">Loading…</div></div>
-    <div class="hint">Drag a card to a new column to advance it (saves to Notion). Tap a name to edit stage / date / notes.</div>
+    <div class="hint">Tap a card to move it — change the Stage and Save (works on phone). Dragging between columns also works on desktop.</div>
   </div>
 
   <div class="view" id="v-deal">
@@ -413,7 +413,7 @@ $('#say').addEventListener('keydown',e=>{if(e.key==='Enter')send();});
 $('#psearch').addEventListener('input',e=>{pf.q=e.target.value;renderPpl();});
 $('#psort').addEventListener('change',e=>{pf.sort=e.target.value;renderPpl();});
 
-async function loadFunnel(){const r=await fetch('/api/funnel');FUNNEL=await r.json();}
+async function loadFunnel(){const r=await fetch('/api/funnel?t='+Date.now());FUNNEL=await r.json();}
 async function loadBoard(){try{const r=await fetch('/api/board');BOARD=await r.json();}catch(e){BOARD=null;}}
 async function loadCalldown(){const r=await fetch('/api/calldown');CD=await r.json();if(!Array.isArray(CD))CD=[];}
 async function refresh(){
