@@ -220,6 +220,55 @@ app.get('/api/calldown', async (req, res) => {
 });
 // ---- END CALL-DOWN ----
 
+// ---- CONTACTS (one per person; many opportunities) ----
+const WWS = { Hot: 3, Warm: 2, Cold: 1 };
+app.get('/api/contacts', async (req, res) => {
+  try {
+    let results = [], cursor = undefined;
+    do {
+      const r = await notion.databases.query({ database_id: DB, filter: { and: [
+        { property: 'Stage', select: { does_not_equal: 'Won' } },
+        { property: 'Stage', select: { does_not_equal: 'Not Now' } }
+      ]}, start_cursor: cursor, page_size: 100 });
+      results = results.concat(r.results); cursor = r.next_cursor;
+    } while (cursor);
+    const all = results.map(mapPage);
+    const by = {};
+    for (const o of all) {
+      const key = (o.name || '').trim().toLowerCase() || o.id;
+      const c = by[key] = by[key] || { name: o.name, phone: '', email: '', community: '', warmth: '', lastContact: null, notes: '', opps: [], totalAmount: 0, lanes: [] };
+      c.opps.push({ id: o.id, lane: o.lane, stage: o.stage, amount: o.amount, nextStep: o.nextStep, nextTouch: o.nextTouch, response: o.response, warmth: o.warmth });
+      c.totalAmount += o.amount || 0;
+      if (o.lane && !c.lanes.includes(o.lane)) c.lanes.push(o.lane);
+      if (!c.phone && o.phone) c.phone = o.phone;
+      if (!c.email && o.email) c.email = o.email;
+      if (o.community && !(c.community || '').includes(o.community)) c.community = [c.community, o.community].filter(Boolean).join(', ');
+      if ((WWS[o.warmth] || 0) > (WWS[c.warmth] || 0)) c.warmth = o.warmth;
+      if (o.lastContact && (!c.lastContact || o.lastContact > c.lastContact)) c.lastContact = o.lastContact;
+      if (o.notes && !c.notes) c.notes = o.notes;
+    }
+    const out = Object.values(by).map(c => ({ ...c, oppCount: c.opps.length,
+      sinceDays: c.lastContact ? Math.floor((Date.now() - new Date(c.lastContact)) / 864e5) : null }));
+    res.json(out);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.post('/api/new-opportunity', async (req, res) => {
+  try {
+    const f = req.body || {};
+    const props = { 'Name': { title: [{ text: { content: f.name || 'Untitled' } }] } };
+    if (f.lane) props['Lane'] = { select: { name: f.lane } };
+    props['Stage'] = { select: { name: f.stage || 'Intro/Reconnect' } };
+    if (f.amount) props['$ Potential'] = { number: Number(f.amount) };
+    if (f.phone) props['Phone'] = { phone_number: f.phone };
+    if (f.email) props['Email'] = { email: f.email };
+    props['Next Touch'] = { date: { start: today() } };
+    const p = await notion.pages.create({ parent: { database_id: DB }, properties: props });
+    funnelCache = { t: 0, data: null };
+    res.json({ ok: true, id: p.id });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+// ---- END CONTACTS ----
+
 
 
 

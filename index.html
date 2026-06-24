@@ -67,6 +67,17 @@
   .tip .th{font-size:11px;color:var(--muted);margin-bottom:3px}
   .pop{position:absolute;right:10px;top:calc(100% - 2px);z-index:25;background:#161a22;border:1px solid var(--accent);border-radius:10px;padding:8px;display:flex;gap:8px}
   .countline{font-size:11.5px;color:var(--muted);margin:8px 2px}
+  .contact{border:1px solid var(--line);border-radius:11px;background:var(--card);margin:6px 0;overflow:hidden}
+  .crow3{display:flex;align-items:center;gap:10px;padding:10px 11px;cursor:pointer}
+  .crow3 .pn{font-weight:600;font-size:14.5px}.crow3 .pm{font-size:11.5px;color:var(--muted);margin-top:1px}
+  .crow3 .idle{margin-left:auto;font-size:12px;color:var(--muted);text-align:right;white-space:nowrap}.crow3 .idle b{color:#cdd5e6}
+  .oppbadge{font-size:11px;background:#16233f;border:1px solid var(--accent);color:#bcd2ff;border-radius:20px;padding:1px 7px;margin-left:4px}
+  .cbody{border-top:1px solid var(--line);padding:8px 11px;background:#10141c}
+  .oppline{display:flex;justify-content:space-between;gap:8px;padding:7px 6px;border-bottom:1px solid var(--line);font-size:12.5px;cursor:pointer}
+  .oppline:last-of-type{border-bottom:0}.oppline .oppr{color:var(--green);white-space:nowrap}.oppline .tag{color:var(--muted)}
+  .cact{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+  .addbox{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;align-items:center}
+  .addbox select,.addbox input{padding:7px;background:#0c0f14;color:var(--ink);border:1px solid var(--line);border-radius:8px;font-size:12.5px}
   /* kanban */
   .chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:11px}
   .board{display:flex;gap:9px;overflow-x:auto;padding-bottom:8px}
@@ -120,7 +131,7 @@
   </div>
 
   <div class="view" id="v-ppl">
-    <div class="subhead">Your whole universe. Hover a name for the last note · tap a name to call/text.</div>
+    <div class="subhead">Your people — one row per human. Tap a name to see their opportunities, add one, or call/text.</div>
     <div class="filt">
       <input class="srch" id="psearch" placeholder="Search everyone…" autocomplete="off">
       <div class="chiprow"><span class="lbl">Lane</span><span id="laneF"></span></div>
@@ -171,7 +182,7 @@ const htmlesc=s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g
 const todayStr=new Date().toISOString().slice(0,10);
 const plus=d=>new Date(Date.now()+d*864e5).toISOString().slice(0,10);
 function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('show');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('show'),1900);}
-let history=[], FUNNEL=null, BOARD=null, CD=[], curLane='PM Retail', dealLane='PM Retail', dragId=null, kSort={};
+let history=[], FUNNEL=null, BOARD=null, CD=[], CONTACTS=[], curLane='PM Retail', dealLane='PM Retail', dragId=null, kSort={};
 
 const PROB={'Intro/Reconnect':.05,'Discovery Call':.12,'Statements + Intro to John':.20,'Stress Test':.40,'Open + Fund':.80,'Won':1,'Qualify':.05,'John Conversation':.20,'Due Diligence':.40,'Transition':.80,'Track-Record Review':.20,'Allocation':.80,'Exploring':.10,'Enrollment Conversation':.40,'Active':1,'Structuring':.40,'Identified':.10,'Intro Made':.40,'Not Now':0};
 const STAGES=['Intro/Reconnect','Discovery Call','Statements + Intro to John','Stress Test','Open + Fund','Qualify','John Conversation','Due Diligence','Transition','Track-Record Review','Allocation','Exploring','Enrollment Conversation','Structuring','Identified','Intro Made','Active','Won','Not Now'];
@@ -288,32 +299,63 @@ function renderFilters(){
   $('#commF').innerHTML=['All','Four Rooms','Not Done Yet','Maverick1000','Reset'].map(v=>chip('comm',v,pf.comm)).join('');
   $('#scopeF').innerHTML=['All','Active','Reservoir'].map(v=>chip('scope',v,pf.scope)).join('');
 }
-function setF(g,v){pf[g]=v;renderFilters();renderPpl();}
-function renderPpl(){
-  const wW={Hot:3,Warm:2,Cold:1};
-  let list=CD.filter(p=>
-    (pf.lane==='All'||p.lane===pf.lane)&&
-    (pf.warm==='All'||p.warmth===pf.warm)&&
-    (pf.comm==='All'||(p.community||'').includes(pf.comm))&&
-    (pf.scope==='All'||p.scope===pf.scope)&&
-    (!pf.q||(p.name||'').toLowerCase().includes(pf.q.toLowerCase())));
-  const s=pf.sort, idle=p=>p.sinceDays==null?99999:p.sinceDays;
-  list.sort((a,b)=> s==='name'?(a.name||'').localeCompare(b.name||''): s==='warmth'?(wW[b.warmth]-wW[a.warmth]): s==='amount'?((b.amount||0)-(a.amount||0)): s==='last'?(idle(a)-idle(b)): (idle(b)-idle(a)));
-  $('#pplList').innerHTML=list.map((p,i)=>`
-    <div class="prow" onmouseenter="showTip(this,${i})" onmouseleave="hideTip(this)">
-      <div>
-        <div class="pn" onclick="event.stopPropagation();showPop(this,'${esc(p.name)}','${digits(p.phone)}')"><span class="dot ${p.warmth}"></span>${p.name||''}</div>
-        <div class="pm">${[p.lane,shortStage(p.stage),p.community].filter(Boolean).join(' · ')}</div>
-      </div>
-      <div class="idle">${p.amount?`<div class="pamt">${fmt$(p.amount)}</div>`:''}<div>${p.sinceDays==null?'<b>never</b>':'<b>'+p.sinceDays+'d</b> silent'}</div></div>
-    </div>`).join('')||'<div class="empty">No matches.</div>';
-  $('#pplCount').textContent=`${list.length} shown · ${CD.length} active in the universe`;
-  window._plist=list;
+function setF(g,v){pf[g]=v;renderFilters();renderContacts();}
+const WWc={Hot:3,Warm:2,Cold:1};
+function renderContacts(){
+  const idle=c=>c.sinceDays==null?99999:c.sinceDays;
+  const isRes=c=>c.warmth==='Cold'&&c.sinceDays==null;
+  let list=CONTACTS.filter(c=>
+    (pf.lane==='All'||(c.lanes||[]).includes(pf.lane))&&
+    (pf.warm==='All'||c.warmth===pf.warm)&&
+    (pf.comm==='All'||(c.community||'').includes(pf.comm))&&
+    (pf.scope==='All'||(pf.scope==='Reservoir'?isRes(c):!isRes(c)))&&
+    (!pf.q||(c.name||'').toLowerCase().includes(pf.q.toLowerCase())));
+  const s=pf.sort;
+  list.sort((a,b)=> s==='name'?(a.name||'').localeCompare(b.name||''): s==='warmth'?((WWc[b.warmth]||0)-(WWc[a.warmth]||0)): s==='amount'?((b.totalAmount||0)-(a.totalAmount||0)): s==='last'?(idle(a)-idle(b)): (idle(b)-idle(a)));
+  window._clist=list;
+  $('#pplList').innerHTML=list.map((c,i)=>contactRow(c,i)).join('')||'<div class="empty">No matches.</div>';
+  const opps=CONTACTS.reduce((n,c)=>n+(c.oppCount||0),0);
+  $('#pplCount').textContent=`${list.length} contacts · ${opps} opportunities`;
 }
-function showTip(row,i){hideAllTips();const p=window._plist[i];if(!p)return;const t=document.createElement('div');t.className='tip';const last=p.sinceDays==null?'never contacted':p.sinceDays+'d ago';t.innerHTML=`<div class="th">Last interaction · ${last}</div>${esc(p.notes)||esc(p.nextStep)||'—'}`;row.appendChild(t);}
-function hideTip(row){const t=row.querySelector('.tip');if(t)t.remove();}
-function hideAllTips(){document.querySelectorAll('.tip,.pop').forEach(e=>e.remove());}
-function showPop(el,name,d){hideAllTips();const row=el.closest('.prow');const pop=document.createElement('div');pop.className='pop';pop.innerHTML=(d?`<a class="b call" href="tel:${d}">Call</a><a class="b text" href="sms:${d}">Text</a>`:'<span class="meta">no number</span>')+`<button class="b" onclick="$('#say').value='${name}: ';document.querySelector('[data-v=act]')&&0;">Log</button>`;row.appendChild(pop);setTimeout(()=>document.addEventListener('click',function h(){hideAllTips();document.removeEventListener('click',h);}),60);}
+function contactRow(c,i){
+  const d=digits(c.phone);
+  const opps=(c.opps||[]).map(o=>`<div class="oppline" onclick="event.stopPropagation();openPerson('${o.id}','${esc(o.stage||'')}')">
+    <span><span class="dot ${o.warmth}"></span>${o.lane||'—'} · ${shortStage(o.stage)}</span>
+    <span class="oppr">${o.amount?fmt$(o.amount):''} <span class="tag">${esc((o.nextStep||'').slice(0,30))}</span></span></div>`).join('');
+  return `<div class="contact">
+    <div class="crow3" onclick="toggleC(${i})">
+      <div><div class="pn"><span class="dot ${c.warmth}"></span>${c.name||''} <span class="oppbadge">${c.oppCount}</span></div>
+      <div class="pm">${[(c.lanes||[]).join(', '),c.community].filter(Boolean).join(' · ')}</div></div>
+      <div class="idle">${c.totalAmount?`<div class="pamt">${fmt$(c.totalAmount)}</div>`:''}<div>${c.sinceDays==null?'<b>never</b>':'<b>'+c.sinceDays+'d</b>'}</div></div>
+    </div>
+    <div class="cbody" id="cb-${i}" style="display:none">
+      ${opps||'<div class="meta">No active opportunities.</div>'}
+      <div class="cact">
+        ${d?`<a class="b call" href="tel:${d}">Call</a><a class="b text" href="sms:${d}">Text</a>`:''}
+        <button class="b book" onclick="event.stopPropagation();addOpp(${i})">+ Add opportunity</button>
+      </div>
+      <div id="addopp-${i}"></div>
+    </div>
+  </div>`;
+}
+function toggleC(i){const b=document.getElementById('cb-'+i); if(b)b.style.display=b.style.display==='none'?'block':'none';}
+function addOpp(i){
+  const c=window._clist[i]; if(!c)return; const box=document.getElementById('addopp-'+i);
+  const lanes=['PM Retail','Advisor Recruit','AIM Allocation','Coaching','Partnership/JV','Connector/JV','Referral'];
+  box.innerHTML=`<div class="addbox">
+    <select id="ao-l-${i}">${lanes.map(l=>`<option>${l}</option>`).join('')}</select>
+    <select id="ao-s-${i}">${STAGES.map(st=>`<option>${st}</option>`).join('')}</select>
+    <input id="ao-a-${i}" placeholder="$ (optional)" inputmode="numeric">
+    <button class="b book" onclick="saveOpp(${i})">Create</button>
+  </div>`;
+}
+async function saveOpp(i){
+  const c=window._clist[i]; if(!c)return;
+  const lane=document.getElementById('ao-l-'+i).value, stage=document.getElementById('ao-s-'+i).value;
+  const a=(document.getElementById('ao-a-'+i).value||'').replace(/[^0-9]/g,'');
+  await fetch('/api/new-opportunity',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:c.name,phone:c.phone,email:c.email,lane,stage,amount:a?Number(a):null})});
+  toast('Opportunity added to '+c.name); refresh();
+}
 
 /* ---------- PIPELINE (kanban) ---------- */
 const wW3={Hot:3,Warm:2,Cold:1};
@@ -410,16 +452,17 @@ document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
   document.querySelectorAll('.view').forEach(v=>v.classList.toggle('on',v.id==='v-'+t.dataset.v));
 }));
 $('#say').addEventListener('keydown',e=>{if(e.key==='Enter')send();});
-$('#psearch').addEventListener('input',e=>{pf.q=e.target.value;renderPpl();});
-$('#psort').addEventListener('change',e=>{pf.sort=e.target.value;renderPpl();});
+$('#psearch').addEventListener('input',e=>{pf.q=e.target.value;renderContacts();});
+$('#psort').addEventListener('change',e=>{pf.sort=e.target.value;renderContacts();});
 
 async function loadFunnel(){const r=await fetch('/api/funnel?t='+Date.now());FUNNEL=await r.json();}
 async function loadBoard(){try{const r=await fetch('/api/board');BOARD=await r.json();}catch(e){BOARD=null;}}
 async function loadCalldown(){const r=await fetch('/api/calldown');CD=await r.json();if(!Array.isArray(CD))CD=[];}
+async function loadContacts(){const r=await fetch('/api/contacts?t='+Date.now());CONTACTS=await r.json();if(!Array.isArray(CONTACTS))CONTACTS=[];}
 async function refresh(){
-  await Promise.all([loadFunnel(),loadBoard(),loadCalldown()]);
+  await Promise.all([loadFunnel(),loadBoard(),loadCalldown(),loadContacts()]);
   if(FUNNEL&&FUNNEL.error){$('#score').innerHTML='<div class="empty">Error: '+FUNNEL.error+'</div>';return;}
-  renderScore(); renderCats(); renderWeek(); renderFilters(); renderPpl(); renderLaneChips(); renderKanban(); renderDeal();
+  renderScore(); renderCats(); renderWeek(); renderFilters(); renderContacts(); renderLaneChips(); renderKanban(); renderDeal();
 }
 refresh();
 </script>
