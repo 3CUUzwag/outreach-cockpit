@@ -274,6 +274,7 @@ app.post('/api/new-opportunity', async (req, res) => {
 
 async function updateOpp(id, f) {
   const props = {};
+  if (f.name !== undefined && String(f.name).trim()) props['Name'] = { title: [{ text: { content: String(f.name).trim() } }] };
   if (f.stage) props['Stage'] = { select: { name: f.stage } };
   if (f.warmth) props['Warmth'] = { select: { name: f.warmth } };
   if (f.amount !== undefined) props['$ Potential'] = (f.amount === '' || f.amount === null) ? { number: null } : { number: Number(f.amount) };
@@ -295,6 +296,37 @@ app.get('/api/today', async (req, res) => {
 });
 app.post('/api/capture', async (req, res) => {
   try { const out = await updateOpp(req.body.id, req.body); funnelCache = { t: 0, data: null }; res.json(out); } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/archive', async (req, res) => {
+  try { await notion.pages.update({ page_id: req.body.id, archived: true }); funnelCache = { t: 0, data: null }; res.json({ ok: true }); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/merge', async (req, res) => {
+  try {
+    const { fromId, toId } = req.body;
+    if (!fromId || !toId || fromId === toId) return res.status(400).json({ error: 'bad ids' });
+    const [fp, tp] = await Promise.all([ notion.pages.retrieve({ page_id: fromId }), notion.pages.retrieve({ page_id: toId }) ]);
+    const a = mapPage(fp), b = mapPage(tp); // a = source (folds in & archived), b = target (kept)
+    const props = {};
+    const amt = Math.max(a.amount || 0, b.amount || 0); if (amt > 0) props['$ Potential'] = { number: amt };
+    const stage = ((STAGE_W[a.stage] || 0) > (STAGE_W[b.stage] || 0)) ? a.stage : b.stage; if (stage) props['Stage'] = { select: { name: stage } };
+    const warmth = ((wW[a.warmth] || 0) > (wW[b.warmth] || 0)) ? a.warmth : b.warmth; if (warmth) props['Warmth'] = { select: { name: warmth } };
+    const nts = [a.nextTouch, b.nextTouch].filter(Boolean).sort(); if (nts.length) props['Next Touch'] = { date: { start: nts[0] } };
+    const lcs = [a.lastContact, b.lastContact].filter(Boolean).sort(); if (lcs.length) props['Last Contact'] = { date: { start: lcs[lcs.length - 1] } };
+    const nextStep = b.nextStep || a.nextStep; if (nextStep) props['Next Step'] = { rich_text: [{ text: { content: nextStep } }] };
+    if (!b.phone && a.phone) props['Phone'] = { phone_number: a.phone };
+    if (!b.email && a.email) props['Email'] = { email: a.email };
+    let notes = b.notes || '';
+    const addparts = [a.notes, a.nextStep ? ('Next: ' + a.nextStep) : ''].filter(Boolean).join(' · ');
+    if (addparts) notes = (notes ? notes + '\n' : '') + `— merged from ${a.name || 'dupe'} (${a.lane || ''}/${a.stage || ''}) —\n` + addparts;
+    if (notes) props['Notes'] = { rich_text: [{ text: { content: notes.slice(0, 1900) } }] };
+    await notion.pages.update({ page_id: toId, properties: props });
+    await notion.pages.update({ page_id: fromId, archived: true });
+    funnelCache = { t: 0, data: null };
+    res.json({ ok: true, into: b.name });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 const tools = [

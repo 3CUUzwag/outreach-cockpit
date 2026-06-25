@@ -414,14 +414,15 @@ function renderDeal(){
 
 /* ---------- PERSON EDITOR (Advance / edit) ---------- */
 function findP(id){ if(!FUNNEL)return null; for(const L of FUNNEL.lanes){ const ps=L.people||{}; for(const st in ps){ const h=(ps[st]||[]).find(p=>p.id===id); if(h)return h; } } return null; }
+function allPeople(){ const out=[]; if(!FUNNEL)return out; for(const L of FUNNEL.lanes){ const ps=L.people||{}; for(const st in ps){ for(const p of (ps[st]||[])) out.push({id:p.id,name:p.name,amount:p.amount,lane:L.lane,stage:st}); } } return out; }
 function openPerson(id,stage){
   let box=document.getElementById('editor'); if(box) box.remove();
   const p=findP(id)||{};
   const opts=STAGES.map(s=>`<option ${s===stage?'selected':''}>${s}</option>`).join('');
   const warmOpts=['Hot','Warm','Cold'].map(w=>`<option ${w===p.warmth?'selected':''}>${w}</option>`).join('');
   box=document.createElement('div'); box.id='editor';
-  box.style.cssText='position:fixed;left:50%;top:14%;transform:translateX(-50%);width:min(92vw,420px);background:#161a22;border:1px solid var(--accent);border-radius:14px;padding:16px;z-index:70';
-  box.innerHTML=`<div style="font-size:13px;color:var(--ink);margin-bottom:8px;font-weight:600">${esc(p.name||'Update record')}</div>
+  box.style.cssText='position:fixed;left:50%;top:12%;transform:translateX(-50%);width:min(92vw,420px);background:#161a22;border:1px solid var(--accent);border-radius:14px;padding:16px;z-index:70';
+  box.innerHTML=`<input id="eName" value="${esc(p.name||'')}" placeholder="Name" style="width:100%;margin-bottom:9px;padding:9px;background:#0c0f14;color:var(--ink);border:1px solid var(--line);border-radius:8px;font-size:14px;font-weight:600">
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
       <select id="eStage" style="flex:1;min-width:150px;padding:9px;background:#0c0f14;color:var(--ink);border:1px solid var(--line);border-radius:8px;font-size:13px">${opts}</select>
       <select id="eWarm" style="padding:9px;background:#0c0f14;color:var(--ink);border:1px solid var(--line);border-radius:8px;font-size:13px">${warmOpts}</select>
@@ -433,17 +434,52 @@ function openPerson(id,stage){
     <textarea id="eNote" placeholder="What happened / note…" rows="3" style="width:100%;margin-top:9px;padding:9px;background:#0c0f14;color:var(--ink);border:1px solid var(--line);border-radius:8px;font-size:13px"></textarea>
     <div style="display:flex;gap:8px;margin-top:10px">
       <button class="b book" style="flex:1" onclick="savePerson('${id}')">Save</button>
-      <button class="b" onclick="document.getElementById('editor').remove()">Cancel</button></div>`;
+      <button class="b" onclick="document.getElementById('editor').remove()">Cancel</button></div>
+    <div style="display:flex;justify-content:space-between;margin-top:12px;border-top:1px solid var(--line);padding-top:10px">
+      <button onclick="openMerge('${id}')" style="background:none;border:0;color:var(--muted);font-size:12px;cursor:pointer">Merge duplicate…</button>
+      <button onclick="delPerson('${id}')" style="background:none;border:0;color:#e06b6b;font-size:12px;cursor:pointer">Delete</button>
+    </div>`;
   document.body.appendChild(box);
 }
 async function savePerson(id){
   const box=document.getElementById('editor'); if(!box)return; const body={id};
+  const nm=box.querySelector('#eName').value.trim(); if(nm)body.name=nm;
   const st=box.querySelector('#eStage').value; if(st)body.stage=st;
   const wm=box.querySelector('#eWarm').value; if(wm)body.warmth=wm;
   const am=box.querySelector('#eAmt').value.trim(); body.amount=(am===''?'':Number(am));
   const dt=box.querySelector('#eDate').value; if(dt)body.next_touch=dt;
   const nt=box.querySelector('#eNote').value.trim(); if(nt){body.notes_append=nt;body.last_contact=todayStr;}
   box.remove(); await fetch('/api/capture',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); toast('Updated'); refresh();
+}
+async function delPerson(id){
+  const p=findP(id)||{};
+  if(!confirm(`Delete "${p.name||'this record'}"?\n\nArchives it (recoverable in Notion trash).`))return;
+  document.getElementById('editor')?.remove();
+  await fetch('/api/archive',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})}); toast('Deleted'); refresh();
+}
+function openMerge(fromId){
+  const box=document.getElementById('editor'); if(!box)return;
+  const me=findP(fromId)||{};
+  box.innerHTML=`<div style="font-size:13px;color:var(--ink);font-weight:600;margin-bottom:2px">Merge "${esc(me.name||'')}" into…</div>
+    <div style="font-size:11.5px;color:var(--muted);margin-bottom:8px">Pick the record to KEEP. This one folds in and gets archived.</div>
+    <input id="mq" placeholder="type a name" oninput="renderMerge('${fromId}')" style="width:100%;padding:9px;background:#0c0f14;color:var(--ink);border:1px solid var(--line);border-radius:8px;font-size:13px">
+    <div id="mres" style="margin-top:8px;max-height:240px;overflow:auto"></div>
+    <button class="b" style="margin-top:10px;width:100%" onclick="openPerson('${fromId}','${esc(me.stage||'Intro/Reconnect')}')">← Back</button>`;
+  renderMerge(fromId);
+}
+function renderMerge(fromId){
+  const q=(document.getElementById('mq')?.value||'').toLowerCase().trim();
+  let list=allPeople().filter(p=>p.id!==fromId);
+  if(q) list=list.filter(p=>(p.name||'').toLowerCase().includes(q));
+  list=list.slice(0,10);
+  const el=document.getElementById('mres'); if(!el)return;
+  el.innerHTML=list.length?list.map(p=>`<div onclick="doMerge('${fromId}','${p.id}')" style="padding:8px 9px;border:1px solid var(--line);border-radius:8px;margin-bottom:6px;cursor:pointer;font-size:13px">${esc(p.name||'')} <span style="opacity:.6;font-size:11.5px">${esc(p.lane||'')} · ${esc(shortStage(p.stage)||'')}${p.amount?' · '+fmt$(p.amount):''}</span></div>`).join(''):'<div style="opacity:.6;font-size:12px;padding:8px">no matches</div>';
+}
+async function doMerge(fromId,toId){
+  const a=findP(fromId)||{}, b=findP(toId)||{};
+  if(!confirm(`Merge "${a.name||''}" INTO "${b.name||''}"?\n\n"${a.name||''}" will be archived (recoverable in Notion).`))return;
+  document.getElementById('editor')?.remove();
+  await fetch('/api/merge',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fromId,toId})}); toast('Merged into '+(b.name||'')); refresh();
 }
 
 /* ---------- CHAT ---------- */
