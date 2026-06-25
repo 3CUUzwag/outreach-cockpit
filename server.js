@@ -276,6 +276,7 @@ async function updateOpp(id, f) {
   const props = {};
   if (f.stage) props['Stage'] = { select: { name: f.stage } };
   if (f.warmth) props['Warmth'] = { select: { name: f.warmth } };
+  if (f.amount !== undefined) props['$ Potential'] = (f.amount === '' || f.amount === null) ? { number: null } : { number: Number(f.amount) };
   if (f.response) props['Response'] = { select: { name: f.response } };
   if (f.next_step !== undefined) props['Next Step'] = { rich_text: [{ text: { content: String(f.next_step) } }] };
   if (f.next_touch !== undefined) props['Next Touch'] = f.next_touch ? { date: { start: f.next_touch } } : { date: null };

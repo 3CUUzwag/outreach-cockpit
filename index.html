@@ -413,15 +413,22 @@ function renderDeal(){
 }
 
 /* ---------- PERSON EDITOR (Advance / edit) ---------- */
+function findP(id){ if(!FUNNEL)return null; for(const L of FUNNEL.lanes){ const ps=L.people||{}; for(const st in ps){ const h=(ps[st]||[]).find(p=>p.id===id); if(h)return h; } } return null; }
 function openPerson(id,stage){
   let box=document.getElementById('editor'); if(box) box.remove();
+  const p=findP(id)||{};
   const opts=STAGES.map(s=>`<option ${s===stage?'selected':''}>${s}</option>`).join('');
+  const warmOpts=['Hot','Warm','Cold'].map(w=>`<option ${w===p.warmth?'selected':''}>${w}</option>`).join('');
   box=document.createElement('div'); box.id='editor';
-  box.style.cssText='position:fixed;left:50%;top:16%;transform:translateX(-50%);width:min(92vw,420px);background:#161a22;border:1px solid var(--accent);border-radius:14px;padding:16px;z-index:70';
-  box.innerHTML=`<div style="font-size:13px;color:var(--muted);margin-bottom:8px">Update record</div>
+  box.style.cssText='position:fixed;left:50%;top:14%;transform:translateX(-50%);width:min(92vw,420px);background:#161a22;border:1px solid var(--accent);border-radius:14px;padding:16px;z-index:70';
+  box.innerHTML=`<div style="font-size:13px;color:var(--ink);margin-bottom:8px;font-weight:600">${esc(p.name||'Update record')}</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
       <select id="eStage" style="flex:1;min-width:150px;padding:9px;background:#0c0f14;color:var(--ink);border:1px solid var(--line);border-radius:8px;font-size:13px">${opts}</select>
-      <input type="date" id="eDate" style="padding:8px;background:#0c0f14;color:var(--ink);border:1px solid var(--line);border-radius:8px;font-size:13px">
+      <select id="eWarm" style="padding:9px;background:#0c0f14;color:var(--ink);border:1px solid var(--line);border-radius:8px;font-size:13px">${warmOpts}</select>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:9px;align-items:center">
+      <span style="color:var(--muted);font-size:13px">$</span><input id="eAmt" type="number" inputmode="numeric" placeholder="AUM" value="${p.amount!=null?p.amount:''}" style="flex:1;padding:9px;background:#0c0f14;color:var(--ink);border:1px solid var(--line);border-radius:8px;font-size:13px">
+      <input type="date" id="eDate" value="${p.nextTouch||''}" style="padding:8px;background:#0c0f14;color:var(--ink);border:1px solid var(--line);border-radius:8px;font-size:13px">
     </div>
     <textarea id="eNote" placeholder="What happened / note…" rows="3" style="width:100%;margin-top:9px;padding:9px;background:#0c0f14;color:var(--ink);border:1px solid var(--line);border-radius:8px;font-size:13px"></textarea>
     <div style="display:flex;gap:8px;margin-top:10px">
@@ -432,6 +439,8 @@ function openPerson(id,stage){
 async function savePerson(id){
   const box=document.getElementById('editor'); if(!box)return; const body={id};
   const st=box.querySelector('#eStage').value; if(st)body.stage=st;
+  const wm=box.querySelector('#eWarm').value; if(wm)body.warmth=wm;
+  const am=box.querySelector('#eAmt').value.trim(); body.amount=(am===''?'':Number(am));
   const dt=box.querySelector('#eDate').value; if(dt)body.next_touch=dt;
   const nt=box.querySelector('#eNote').value.trim(); if(nt){body.notes_append=nt;body.last_contact=todayStr;}
   box.remove(); await fetch('/api/capture',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); toast('Updated'); refresh();
